@@ -1,0 +1,11 @@
+{
+    print(True);
+    print(False);
+    print('h');
+    print('e');
+    print("World");
+    print(0b010110);
+    print(010);
+    print(0xAF2C);
+    print(0xaf2c);
+}

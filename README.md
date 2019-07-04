@@ -1,2 +1,3 @@
-# compiler-project
-Project for university course on compilers
+# Compiler project
+
+- Project for university course on compilers

@@ -1,0 +1,136 @@
+/* For more infomation, look at official bison 
+ * (c++ parser section) documentation */
+%{
+#include <iostream>
+#include <string>
+#include "../include/structs.hpp"
+#include "../include/driver.hpp"
+
+/* Syntax error function */
+void yy::parser::error(const location_type& l, const std::string& msg) {
+	driver.error(l, msg);
+}
+%}
+
+%language "c++"
+%locations
+
+%define api.value.type variant
+%define api.token.constructor
+%define parse.trace
+
+/* Better error messages */
+%define parse.error verbose
+
+/* Pass to flex */
+%code requires {
+class Driver;
+}
+%param { Driver &driver }
+
+/* Token definitions */
+%token
+eof_token 0 "end of file"	
+print_token "print"          
+if_token "if"          
+while_token "while"          
+int_kw_token "Int"          
+bool_kw_token "Bool"          
+real_kw_token "Real"          
+char_kw_token "Char"          
+string_kw_token "String"          
+crl_lparen_token "{"            
+crl_rparen_token "}"            
+sqr_lparen_token "["            
+sqr_rparen_token "]"            
+plus_token "+"    
+minus_token "-"   
+asterix_token "*"                   
+slash_token "/"                   
+backslash_token "\\"                   
+mod_token "mod"                   
+percent_token "%"                   
+lparen_token "("  
+rparen_token ")"  
+assign_token "="  
+eq_token "=="  
+lt_token "<"      
+gt_token ">"      
+leq_token "<="      
+geq_token ">="      
+shl_token "<<"      
+shr_token ">>"      
+semicol_token ";" 
+dot_token "." 
+col_token ":" 
+comma_token ","   
+dbl_amp_token "&&"
+amp_token "&"
+dbl_pipe_token "||"
+pipe_token "|"
+
+/* No union needed, we are using variant */
+%token <std::string> id_token "identifier";
+%token <int> int_token "Integer literal";
+%token <double> real_token "Real literal";
+%token <std::string> string_token "String literal";
+%token <char> char_token "Char literal";
+%token <bool> bool_token "Bool literal";
+
+%left "+" "-"
+%left "*" "/"
+
+%%
+/* Consider maybe using std::swap instead of std::move everywhere 
+ * because there is discussion about potential move problems with 
+ * bison variant types */
+
+Program : Block {}
+
+
+Block : "{" List_of_stmts "}"
+      | "{" /* Empty Block */ "}"
+      ;
+
+
+List_of_stmts : List_of_stmts Stmt
+              | Stmt 
+              ;
+
+Stmt : Sprt_stmt ";" /* Stmt that ends with separator  */
+     | ";" /* Empty statement */ {}
+     | Block
+     ;
+
+Sprt_stmt : print_token "(" int_token ")" { std::cout << $3 << std::endl; }
+	  | print_token "(" real_token ")" { std::cout << $3 << std::endl; }
+	  | print_token "(" bool_token ")" { std::cout << $3 << std::endl; }
+      | print_token "(" char_token ")" { std::cout << $3 << std::endl; }
+      | print_token "(" string_token ")" { std::cout << $3 << std::endl; }
+	  ;
+
+%%
+
+int main(int argc, char * argv[])
+{
+	bool read_from_file = false;
+	Driver driver;
+
+	int i;
+	for (i = 1; i < argc; i++) {
+		if (argv[i] == std::string ("-p")) {
+			driver.trace_parsing = true;
+		} else if (argv[i] == std::string ("-s")) {
+			driver.trace_scanning = true;
+		} else {
+			read_from_file = true;
+		}
+	}
+
+	if (read_from_file)
+		driver.parse(argv[i-1]);
+	else
+		driver.parse();
+
+	return 0;
+}
