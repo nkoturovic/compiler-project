@@ -140,7 +140,7 @@ $endif$
   %}
 
 \usepackage{titling}
-\setlength{\droptitle}{-16mm}
+\setlength{\droptitle}{-10mm}
 
 \usepackage{fancyhdr}
 
@@ -510,7 +510,7 @@ $if(subtitle)$
 \subtitle{$subtitle$}
 $endif$
 $if(author)$
-\author{$for(author)$\large $author$$sep$ \and $endfor$}
+\author{$for(author)$\large $author$ \\ $sep$$endfor$}
 $endif$
 $if(institute)$
 \providecommand{\institute}[1]{}
@@ -543,6 +543,12 @@ $if(beamer)$
 \frame{\titlepage}
 $else$
 \maketitle
+
+\begin{center}
+	\vspace{30mm} 
+	\includegraphics[width=.7\textwidth]{img/cover.png}
+\end{center}
+
 $endif$
 $if(abstract)$
 \begin{abstract}
@@ -554,8 +560,13 @@ $endif$
 $for(include-before)$
 $include-before$
 
+
+
 $endfor$
 $if(toc)$
+\newpage~
+\thispagestyle{empty}
+\newpage
 $if(beamer)$
 \begin{frame}
 \tableofcontents[hideallsubsections]
@@ -567,7 +578,12 @@ $if(colorlinks)$
 $endif$
 
 \setcounter{tocdepth}{$toc-depth$}
+
+\thispagestyle{empty}
 \tableofcontents
+\newpage~
+\thispagestyle{empty}
+\newpage
 }
 $endif$
 $endif$

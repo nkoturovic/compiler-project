@@ -1,4 +1,4 @@
-FILENAME=README
+FILENAME=seminarski_rad
 
 .PHONY: clean
 
