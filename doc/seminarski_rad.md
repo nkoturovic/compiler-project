@@ -35,3 +35,18 @@ Blagoje Mirković (<blagoje.mirkovic@gmail.com>)
 \newpage \ \thispagestyle{empty} \ \newpage
 
 # Uvod
+
+Često je pre nego što se upitamo *kako* dobro upitati se *zašto*. Zašto uopšte praviti novi jezik? 
+
+
+Proces prevođenja programa se može zamisliti kao niz transformacija koji na jednom kraju ima (izvorni) jezik $L1$, a na drugom kraju ciljni jezik $L2$. Pre i u tokom prevođenja potrebno je vršiti određene analize tj. ispitati korektnost izvornog programa, tj. da li postoje greške u kodu i korisniku predočiti o kakvoj vrsti greške se radi. U početku ovaj proces može delovati komplikovano, ali uvidom i razumevanjem svake od faza prevođenja shvatićemo da je dosta prirodan i nudi dosta prostora za naše ideje i dosetke koje mogu u mnogome poboljšati ovaj proces.
+
+
+
+
+
+
+
+
+
+Neformalno govoreći, kao zadatak imamo da 
