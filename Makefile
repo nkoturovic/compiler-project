@@ -1,7 +1,7 @@
 # Compiler variables
 GOAL = mylang.out
 CXX = g++
-CXXFLAGS = -std=c++2a -Wall -Wextra -Wno-unused
+CXXFLAGS = -std=c++2a -Wall -Wextra -Wno-unused -g
 
 # Relevant directories
 INC_DIR = include
@@ -11,7 +11,7 @@ OBJ_DIR = $(SRC_DIR)/obj
 LIB_DIR = $(SRC_DIR)/libs
 
 # Build rules
-$(GOAL): $(OBJ_DIR)/lex.yy.o $(OBJ_DIR)/parser.tab.o $(OBJ_DIR)/driver.o
+$(GOAL): $(OBJ_DIR)/lex.yy.o $(OBJ_DIR)/parser.tab.o $(OBJ_DIR)/driver.o $(OBJ_DIR)/ast.o
 	$(CXX) -o $@ $^
 
 $(OBJ_DIR)/parser.tab.o: $(SRC_DIR)/parser.tab.cpp $(INC_DIR)/parser.tab.hpp $(INC_DIR)/driver.hpp
@@ -21,6 +21,9 @@ $(OBJ_DIR)/lex.yy.o: $(SRC_DIR)/lex.yy.c $(INC_DIR)/parser.tab.hpp $(INC_DIR)/dr
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 $(OBJ_DIR)/driver.o: $(SRC_DIR)/driver.cpp $(INC_DIR)/driver.hpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(OBJ_DIR)/ast.o: $(SRC_DIR)/ast/ast.cpp $(INC_DIR)/ast/ast.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 $(SRC_DIR)/lex.yy.c: $(SRC_DIR)/lexer.lex
