@@ -167,6 +167,7 @@ Expr : "(" Expr ")" {}
 Literal : char_token {}
         | int_token {}
         | real_token {}
+        | string_token {}
         ;
 
 
