@@ -1,0 +1,12 @@
+LEXER TRASH
+"True" { return yy::parser::make_bool_token(1, loc); }
+"False" { return yy::parser::make_bool_token(0, loc); }
+"String" { return yy::parser::make_string_kw_token(loc); }
+/*string_kw_token "string"*/
+
+PARSER TRASH
+%type <std::unique_ptr<ast::Statement>> Stmt Sprt_stmt 
+%type <std::unique_ptr<ast::Expression>> Expr Func_call Literal 
+%type <std::unique_ptr<std::vector<std::unique_ptr<ast::Expression>>>> List_of_expr
+
+

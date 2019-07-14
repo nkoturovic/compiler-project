@@ -14,6 +14,7 @@ static yy::location loc;
 %}
 
 %{
+
 /* Code run each time pattern is matched */
 #define YY_USER_ACTION loc.columns(yyleng);
 %}
@@ -30,14 +31,11 @@ loc.step();
 "print" { return yy::parser::make_print_token(loc); }
 "if" { return yy::parser::make_if_token(loc); }
 "while" { return yy::parser::make_while_token(loc); }
-"mod" { return yy::parser::make_mod_token(loc); }
-"Int" { return yy::parser::make_int_kw_token(loc); }
-"Bool" { return yy::parser::make_bool_kw_token(loc); }
-"Real" { return yy::parser::make_real_kw_token(loc); }
-"Char" { return yy::parser::make_char_kw_token(loc); }
-"String" { return yy::parser::make_string_kw_token(loc); }
-"True" { return yy::parser::make_bool_token(1, loc); }
-"False" { return yy::parser::make_bool_token(0, loc); }
+"%" { return yy::parser::make_percent_token(loc); }
+"int" { return yy::parser::make_int_kw_token(loc); }
+"bool" { return yy::parser::make_bool_kw_token(loc); }
+"real" { return yy::parser::make_double_kw_token(loc); }
+"char" { return yy::parser::make_char_kw_token(loc); }
 {ID} { return yy::parser::make_id_token(yytext, loc); }
 "{" { return yy::parser::make_crl_lparen_token(loc); }
 "}" { return yy::parser::make_crl_rparen_token(loc); }

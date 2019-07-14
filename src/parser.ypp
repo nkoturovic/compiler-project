@@ -3,8 +3,9 @@
 %{
 #include <iostream>
 #include <string>
-#include "../include/structs.hpp"
+#include <memory>
 #include "../include/driver.hpp"
+#include "../include/ast/ast.hpp"
 
 /* Syntax error function */
 void yy::parser::error(const location_type& l, const std::string& msg) {
@@ -34,11 +35,10 @@ eof_token 0 "end of file"
 print_token "print"          
 if_token "if"          
 while_token "while"          
-int_kw_token "Int"          
-bool_kw_token "Bool"          
-real_kw_token "Real"          
-char_kw_token "Char"          
-string_kw_token "String"          
+int_kw_token "int"          
+bool_kw_token "bool"          
+double_kw_token "double"          
+char_kw_token "char"          
 crl_lparen_token "{"            
 crl_rparen_token "}"            
 sqr_lparen_token "["            
@@ -48,7 +48,6 @@ minus_token "-"
 asterix_token "*"                   
 slash_token "/"                   
 backslash_token "\\"                   
-mod_token "mod"                   
 percent_token "%"                   
 lparen_token "("  
 rparen_token ")"  
@@ -64,7 +63,10 @@ semicol_token ";"
 dot_token "." 
 col_token ":" 
 comma_token ","   
+backtick_token "`"   
 dbl_amp_token "&&"
+excl_token "!"
+tilde_token "~"
 amp_token "&"
 dbl_pipe_token "||"
 pipe_token "|"
@@ -72,13 +74,31 @@ pipe_token "|"
 /* No union needed, we are using variant */
 %token <std::string> id_token "identifier";
 %token <int> int_token "Integer literal";
-%token <double> real_token "Real literal";
-%token <std::string> string_token "String literal";
+%token <double> real_token "Floating point literal";
 %token <char> char_token "Char literal";
-%token <bool> bool_token "Bool literal";
+%token <std::string> string_token "String literal";
+
+%left "="
+%left "&&"
+%left "||"
+
+%left "==" "!="
+
+%left "|"
+%left "^"
+%left "&"
+
+%left "<" "<=" ">" ">="
+
+%left "<<" ">>"
 
 %left "+" "-"
-%left "*" "/"
+%left "*" "/" "%"
+
+%nonassoc "!" "~"
+%nonassoc UMINUS UPLUS
+%nonassoc CALL "`"
+
 
 %%
 /* Consider maybe using std::swap instead of std::move everywhere 
@@ -93,21 +113,75 @@ Block : "{" List_of_stmts "}"
       ;
 
 
-List_of_stmts : List_of_stmts Stmt
-              | Stmt 
+List_of_stmts : List_of_stmts Stmt { }
+              | Stmt {}
               ;
 
-Stmt : Sprt_stmt ";" /* Stmt that ends with separator  */
-     | ";" /* Empty statement */ {}
-     | Block
+Stmt : Sprt_stmt ";" { } /* Stmt that ends with separator  */
+     | ";" { } /* Empty statement */ {}
+     | Block { }
      ;
 
-Sprt_stmt : print_token "(" int_token ")" { std::cout << $3 << std::endl; }
-	  | print_token "(" real_token ")" { std::cout << $3 << std::endl; }
-	  | print_token "(" bool_token ")" { std::cout << $3 << std::endl; }
-      | print_token "(" char_token ")" { std::cout << $3 << std::endl; }
-      | print_token "(" string_token ")" { std::cout << $3 << std::endl; }
-	  ;
+Sprt_stmt : Expr { }
+          | print_token "(" List_of_expr ")" {}
+          | Type id_token "=" Expr { } 
+          | LVal "=" Expr { }
+	      ;
+
+Type : Primitive_type
+     ;
+
+Primitive_type : "char" | "int" | "double";
+           ;
+
+Expr : "(" Expr ")" {}
+     | Expr "+" Expr {}
+     | Expr "-" Expr {}
+     | Expr "*" Expr {}
+     | Expr "/" Expr {}
+     | Expr "&&" Expr { }
+     | Expr "||" Expr { }
+     | Expr "&" Expr { }
+     | Expr "|" Expr { }
+     | Expr "^" Expr { }
+     | Expr "<" Expr { }
+     | Expr ">" Expr { }
+     | Expr "<=" Expr { }
+     | Expr ">=" Expr { }
+     | Expr "<<" Expr { }
+     | Expr ">>" Expr { }
+     | Expr "==" Expr { }
+     | Expr "!=" Expr { }
+     | Expr "%" Expr { }
+     | id_token "[" Expr "]" { }
+     | "!" Expr { }
+     | "~" Expr { }
+     | Func_call %prec CALL { }
+     | Expr "`" id_token "`" Expr { }
+     | "-" Expr %prec UMINUS { }
+     | "+" Expr %prec UPLUS { }
+     | id_token { }
+     | Literal { }
+     ;
+
+Literal : char_token {}
+        | int_token {}
+        | real_token {}
+        ;
+
+
+Func_call : id_token "(" Parameters ")" { }
+
+Parameters : List_of_expr { }
+           ;
+
+List_of_expr : List_of_expr "," Expr {}
+             | Expr {}
+             ;
+
+LVal : id_token { }
+     | id_token "[" Expr "]" { }
+     ;
 
 %%
 
