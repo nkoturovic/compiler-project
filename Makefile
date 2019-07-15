@@ -11,7 +11,7 @@ OBJ_DIR = $(SRC_DIR)/obj
 LIB_DIR = $(SRC_DIR)/libs
 
 # Build rules
-$(GOAL): $(OBJ_DIR)/lex.yy.o $(OBJ_DIR)/parser.tab.o $(OBJ_DIR)/driver.o $(OBJ_DIR)/ast.o
+$(GOAL): $(OBJ_DIR)/lex.yy.o $(OBJ_DIR)/parser.tab.o $(OBJ_DIR)/driver.o $(OBJ_DIR)/ast.o $(OBJ_DIR)/data_types.o
 	$(CXX) -o $@ $^
 
 $(OBJ_DIR)/parser.tab.o: $(SRC_DIR)/parser.tab.cpp $(INC_DIR)/parser.tab.hpp $(INC_DIR)/driver.hpp
@@ -24,6 +24,9 @@ $(OBJ_DIR)/driver.o: $(SRC_DIR)/driver.cpp $(INC_DIR)/driver.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 $(OBJ_DIR)/ast.o: $(SRC_DIR)/ast/ast.cpp $(INC_DIR)/ast/ast.hpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(OBJ_DIR)/data_types.o: $(SRC_DIR)/ast/data_types.cpp $(INC_DIR)/ast/data_types.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 $(SRC_DIR)/lex.yy.c: $(SRC_DIR)/lexer.lex

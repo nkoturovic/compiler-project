@@ -6,7 +6,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <string>
-#include "../include/structs.hpp"
+#include <memory>
 #include "../include/driver.hpp"
 #include "../include/parser.tab.hpp"
 
@@ -33,7 +33,6 @@ loc.step();
 "while" { return yy::parser::make_while_token(loc); }
 "%" { return yy::parser::make_percent_token(loc); }
 "int" { return yy::parser::make_int_kw_token(loc); }
-"bool" { return yy::parser::make_bool_kw_token(loc); }
 "real" { return yy::parser::make_double_kw_token(loc); }
 "char" { return yy::parser::make_char_kw_token(loc); }
 {ID} { return yy::parser::make_id_token(yytext, loc); }

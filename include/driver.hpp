@@ -3,6 +3,7 @@
 
 #include <map>
 #include <string>
+#include "../include/ast/ast.hpp"
 #include "structs.hpp"
 #include "parser.tab.hpp"
 

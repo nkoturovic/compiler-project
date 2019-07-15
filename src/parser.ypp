@@ -3,6 +3,7 @@
 %{
 #include <iostream>
 #include <string>
+#include <vector>
 #include <memory>
 #include "../include/driver.hpp"
 #include "../include/ast/ast.hpp"
@@ -36,7 +37,6 @@ print_token "print"
 if_token "if"          
 while_token "while"          
 int_kw_token "int"          
-bool_kw_token "bool"          
 double_kw_token "double"          
 char_kw_token "char"          
 crl_lparen_token "{"            
@@ -99,6 +99,9 @@ pipe_token "|"
 %nonassoc UMINUS UPLUS
 %nonassoc CALL "`"
 
+%type <std::unique_ptr<ast::Statement>> Stmt Sprt_stmt
+%type <std::unique_ptr<ast::Expression>> Expr
+%type <std::unique_ptr<ast::Literal>> Literal
 
 %%
 /* Consider maybe using std::swap instead of std::move everywhere 
@@ -114,7 +117,7 @@ Block : "{" List_of_stmts "}"
 
 
 List_of_stmts : List_of_stmts Stmt { }
-              | Stmt {}
+              | Stmt { }
               ;
 
 Stmt : Sprt_stmt ";" { } /* Stmt that ends with separator  */
@@ -122,10 +125,11 @@ Stmt : Sprt_stmt ";" { } /* Stmt that ends with separator  */
      | Block { }
      ;
 
-Sprt_stmt : Expr { }
+Sprt_stmt : Expr { 
+            $1->interpret(); 
+            std::cout << std::endl;
+          }
           | print_token "(" List_of_expr ")" {}
-          | Type id_token "=" Expr { } 
-          | LVal "=" Expr { }
 	      ;
 
 Type : Primitive_type
@@ -135,7 +139,7 @@ Primitive_type : "char" | "int" | "double";
            ;
 
 Expr : "(" Expr ")" {}
-     | Expr "+" Expr {}
+     | Expr "+" Expr { $$ = std::make_unique<ast::Plus>(@$, std::move($1), std::move($3)); }
      | Expr "-" Expr {}
      | Expr "*" Expr {}
      | Expr "/" Expr {}
@@ -161,13 +165,12 @@ Expr : "(" Expr ")" {}
      | "-" Expr %prec UMINUS { }
      | "+" Expr %prec UPLUS { }
      | id_token { }
-     | Literal { }
+     | Literal { $$ = std::move($1); }
      ;
 
-Literal : char_token {}
-        | int_token {}
-        | real_token {}
-        | string_token {}
+Literal : char_token { $$ = std::make_unique<ast::Literal>(@$, ast::Data(ast::DataType::CHAR, $1)); }
+        | int_token { $$ = std::make_unique<ast::Literal>(@$, ast::Data(ast::DataType::INT, $1)); }
+        | real_token { $$ = std::make_unique<ast::Literal>(@$, ast::Data(ast::DataType::DOUBLE, $1)); }
         ;
 
 
