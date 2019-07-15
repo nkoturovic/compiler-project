@@ -33,7 +33,7 @@ loc.step();
 "while" { return yy::parser::make_while_token(loc); }
 "%" { return yy::parser::make_percent_token(loc); }
 "int" { return yy::parser::make_int_kw_token(loc); }
-"real" { return yy::parser::make_double_kw_token(loc); }
+"double" { return yy::parser::make_double_kw_token(loc); }
 "char" { return yy::parser::make_char_kw_token(loc); }
 {ID} { return yy::parser::make_id_token(yytext, loc); }
 "{" { return yy::parser::make_crl_lparen_token(loc); }
@@ -77,7 +77,7 @@ loc.step();
 	           return yy::parser::make_int_token(val, loc); }
 
 [0-9]*"."[0-9]+ { double val = strtod(yytext, nullptr); 
-	          return yy::parser::make_real_token(val, loc); }
+	          return yy::parser::make_double_token(val, loc); }
 
 '(\\.|[^'\\])' {
 	   return yy::parser::make_char_token(yytext[1], loc); }

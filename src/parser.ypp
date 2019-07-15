@@ -71,10 +71,10 @@ amp_token "&"
 dbl_pipe_token "||"
 pipe_token "|"
 
-/* No union needed, we are using variant */
+/* No union needed, we are using bison variant */
 %token <std::string> id_token "identifier";
 %token <int> int_token "Integer literal";
-%token <double> real_token "Floating point literal";
+%token <double> double_token "Floating point literal";
 %token <char> char_token "Char literal";
 %token <std::string> string_token "String literal";
 
@@ -170,7 +170,7 @@ Expr : "(" Expr ")" {}
 
 Literal : char_token { $$ = std::make_unique<ast::Literal>(@$, ast::Data(ast::DataType::CHAR, $1)); }
         | int_token { $$ = std::make_unique<ast::Literal>(@$, ast::Data(ast::DataType::INT, $1)); }
-        | real_token { $$ = std::make_unique<ast::Literal>(@$, ast::Data(ast::DataType::DOUBLE, $1)); }
+        | double_token { $$ = std::make_unique<ast::Literal>(@$, ast::Data(ast::DataType::DOUBLE, $1)); }
         ;
 
 

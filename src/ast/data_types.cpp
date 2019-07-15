@@ -50,9 +50,6 @@ std::ostream& operator << (std::ostream & out, const Data& data) {
 Data Data::plus(DataType type, const Data &lhs, const Data &rhs) {
     DataType to_type = type;
 
-    if (type < DataType::INT)
-        to_type = DataType::INT;
-
     Data op1 = Data::convert(lhs, to_type);
     Data op2 = Data::convert(rhs, to_type);
     DataRepresent type_repr = type_to_represent(to_type);
