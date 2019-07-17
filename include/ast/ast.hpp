@@ -5,7 +5,7 @@
 #include <variant>
 #include <sstream>
 #include <memory>
-#include <stack>
+#include <queue>
 #include "../location.hh"
 #include "../structs.hpp"
 #include "../lang/data_types.hpp"
@@ -17,7 +17,7 @@ namespace cpl::ast {
 // AST
 class AstNode {
 public:
-    inline static std::stack<Error> errors {};
+    mutable std::optional<Error> opt_error { std::nullopt };
     yy::location loc;
     AstNode(yy::location loc);
 };

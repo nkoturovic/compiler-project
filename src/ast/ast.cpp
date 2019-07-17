@@ -14,20 +14,20 @@ Expression::Expression(yy::location loc) : Statement(loc) {}
 
 void Expression::interpret() const {
     Data eval = this->evaluate();
-    if (this->errors.empty()) {
+    if (!this->opt_error.has_value()) {
         std::cout << eval << std::endl;
     } else {
-        while (!errors.empty()) {
-            Error &err = errors.top();
-            Driver::get_active_instance().error(err.loc, err.msg);
-            errors.pop();
-        }
+        const Error &err = opt_error.value();
+        const Driver &driver = Driver::get_active_instance();
+        driver.error(err.loc, err.msg);
     }
 }
 
 Literal::Literal(yy::location loc, Data data) : Expression(loc), m_data(data) {}
 
 DataType Literal::check_type() const {
+    if (this->m_data.type == DataType::INVALID)
+        this->opt_error.emplace(Error(this->loc, std::string("Invalid type of literal")));
     return m_data.type;
 }
 
@@ -40,14 +40,26 @@ BinOp::BinOp(yy::location loc, BinOpId op_id, std::unique_ptr<Expression> lhs, s
 
 DataType BinOp::check_type() const { 
     DataType lhs_type = m_lhs->check_type(), rhs_type = m_rhs->check_type();
+
+    if (lhs_type == DataType::INVALID) {
+        if(m_lhs->opt_error.has_value())
+            this->opt_error.emplace(m_lhs->opt_error.value());
+        return DataType::INVALID;
+    } else if (rhs_type == DataType::INVALID) {
+        if (m_rhs->opt_error.has_value())
+            this->opt_error.emplace(m_rhs->opt_error.value());
+        return DataType::INVALID;
+    }
+
     DataType res = Semantic::binop_check(m_op_id, lhs_type, rhs_type);
 
     if (res == DataType::INVALID) {
         std::stringstream err_msg_ss;
         err_msg_ss << "Invalid operands to BinOp " << BinOpInfo::binop_id_to_string(m_op_id)
             << ": (" << TypeInfo::type_to_string(lhs_type) << ", " << TypeInfo::type_to_string(rhs_type) << ")";
-        errors.push(Error(loc, err_msg_ss.str()));
+        this->opt_error.emplace(Error(loc, err_msg_ss.str()));
     }
+
     return res;
 }
 
