@@ -4,7 +4,6 @@
 #include <map>
 #include <string>
 #include "../include/ast/ast.hpp"
-#include "structs.hpp"
 #include "parser.tab.hpp"
 
 /* Tell Flex the lexer's prototype ... */
@@ -14,7 +13,12 @@
 YY_DECL;
 
 class Driver {
+private:
+    inline static Driver * m_active_instance = nullptr;
 public:
+    Driver();
+    static const Driver& get_active_instance();
+    static void set_active_instance(Driver &driver);
 	/* File being processed */
 	std::string file_path;
 
@@ -26,7 +30,7 @@ public:
 	void scan_begin();
 	void scan_end();
 	int parse(const std::string & file_path = "");
-	void error(const yy::location &l, const std::string &msg);
+	void error(const yy::location &l, const std::string &msg) const;
 };
 
 #endif

@@ -11,7 +11,7 @@ OBJ_DIR = $(SRC_DIR)/obj
 LIB_DIR = $(SRC_DIR)/libs
 
 # Build rules
-$(GOAL): $(OBJ_DIR)/lex.yy.o $(OBJ_DIR)/parser.tab.o $(OBJ_DIR)/driver.o $(OBJ_DIR)/ast.o $(OBJ_DIR)/data_types.o
+$(GOAL): $(OBJ_DIR)/lex.yy.o $(OBJ_DIR)/parser.tab.o $(OBJ_DIR)/driver.o $(OBJ_DIR)/ast.o $(OBJ_DIR)/data_types.o $(OBJ_DIR)/data.o $(OBJ_DIR)/operators.o $(OBJ_DIR)/semantic.o $(OBJ_DIR)/structs.o
 	$(CXX) -o $@ $^
 
 $(OBJ_DIR)/parser.tab.o: $(SRC_DIR)/parser.tab.cpp $(INC_DIR)/parser.tab.hpp $(INC_DIR)/driver.hpp
@@ -20,13 +20,25 @@ $(OBJ_DIR)/parser.tab.o: $(SRC_DIR)/parser.tab.cpp $(INC_DIR)/parser.tab.hpp $(I
 $(OBJ_DIR)/lex.yy.o: $(SRC_DIR)/lex.yy.c $(INC_DIR)/parser.tab.hpp $(INC_DIR)/driver.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-$(OBJ_DIR)/driver.o: $(SRC_DIR)/driver.cpp $(INC_DIR)/driver.hpp
+$(OBJ_DIR)/driver.o: $(SRC_DIR)/driver.cpp $(INC_DIR)/driver.hpp $(INC_DIR)/color.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 $(OBJ_DIR)/ast.o: $(SRC_DIR)/ast/ast.cpp $(INC_DIR)/ast/ast.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-$(OBJ_DIR)/data_types.o: $(SRC_DIR)/ast/data_types.cpp $(INC_DIR)/ast/data_types.hpp
+$(OBJ_DIR)/data_types.o: $(SRC_DIR)/lang/data_types.cpp $(INC_DIR)/lang/data_types.hpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(OBJ_DIR)/data.o: $(SRC_DIR)/lang/data.cpp $(INC_DIR)/lang/data.hpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(OBJ_DIR)/operators.o: $(SRC_DIR)/lang/operators.cpp $(INC_DIR)/lang/operators.hpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(OBJ_DIR)/semantic.o: $(SRC_DIR)/lang/semantic.cpp $(INC_DIR)/lang/semantic.hpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(OBJ_DIR)/structs.o: $(SRC_DIR)/structs.cpp $(INC_DIR)/structs.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 $(SRC_DIR)/lex.yy.c: $(SRC_DIR)/lexer.lex

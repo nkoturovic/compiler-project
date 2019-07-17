@@ -1,4 +1,5 @@
 #include "../include/driver.hpp"
+#include "../include/color.hpp"
 #include <cstring>
 #include <fstream>
 #include <sstream>
@@ -25,6 +26,15 @@ static std::string read_n_to_m_lines
 	}
 
 	return retval.str(); 
+}
+
+Driver::Driver() { }
+void Driver::set_active_instance(Driver &driver) {
+    m_active_instance = &driver;
+}
+
+const Driver& Driver::get_active_instance() {
+    return *m_active_instance;
 }
 
 void Driver::scan_begin() {
@@ -61,24 +71,31 @@ int Driver::parse(const std::string &file_path) {
 	return retval;
 }
 
-void Driver::error(const yy::location &l, const std::string &msg) {
+void Driver::error(const yy::location &l, const std::string &msg) const {
 
 	std::string preciding_ws(l.begin.column - 1, ' ');
 	std::stringstream err_strm;
+
+    Color::Modifier color_red(Color::FG_RED_BOLD);
+    Color::Modifier color_blue(Color::FG_BLUE_BOLD);
+    Color::Modifier color_def(Color::FG_DEFAULT);
 
 	if (!file_path.empty()) {
 		std::ifstream in_file(this->file_path); // read file
 		std::string lines_with_error(::read_n_to_m_lines(in_file, l.begin.line, l.end.line));
         std::replace( lines_with_error.begin(), lines_with_error.end(), '\t', ' '); // replace tabs with spaces
 
-		err_strm <<  file_path << ":";
-		err_strm << l << ": " << msg << "\n";
-		err_strm << lines_with_error << "\n";
-		err_strm << preciding_ws << "^\n";
+		err_strm << color_red << "Error" << color_def << " in ";
+		err_strm << color_blue << file_path << ":";
+		err_strm << l << ": " << color_def << msg << '\n';
+		err_strm << lines_with_error.substr(0, l.begin.column - 1) <<
+            color_blue << lines_with_error.substr(l.begin.column-1, l.end.column - l.begin.column) <<
+            color_def << lines_with_error.substr(l.end.column-1, lines_with_error.length()) << '\n';
+		err_strm << preciding_ws << color_blue << "^" << std::string(l.end.column - l.begin.column-1, '~') << color_def << '\n';
 	} else {
 		//err_strm << preciding_ws << "^\n";
 		//err_strm << l << ": " << msg << "\n";
-		err_strm <<  msg << "\n";
+		err_strm << color_red << "Error: " << color_def << msg << color_def << '\n';
 	}
 
 	std::cerr << err_strm.str() << std::flush;

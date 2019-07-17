@@ -7,6 +7,9 @@
 #include <memory>
 #include "../include/driver.hpp"
 #include "../include/ast/ast.hpp"
+#include "../include/lang/data_types.hpp"
+#include "../include/lang/operators.hpp"
+#include "../include/structs.hpp"
 
 /* Syntax error function */
 void yy::parser::error(const location_type& l, const std::string& msg) {
@@ -27,6 +30,7 @@ void yy::parser::error(const location_type& l, const std::string& msg) {
 /* Pass to flex */
 %code requires {
 class Driver;
+using namespace cpl;
 }
 %param { Driver &driver }
 
@@ -127,7 +131,6 @@ Stmt : Sprt_stmt ";" { } /* Stmt that ends with separator  */
 
 Sprt_stmt : Expr { 
             $1->interpret(); 
-            std::cout << std::endl;
           }
           | print_token "(" List_of_expr ")" {}
 	      ;
@@ -139,7 +142,7 @@ Primitive_type : "char" | "int" | "double";
            ;
 
 Expr : "(" Expr ")" {}
-     | Expr "+" Expr { $$ = std::make_unique<ast::Plus>(@$, std::move($1), std::move($3)); }
+     | Expr "+" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::PLUS, std::move($1), std::move($3)); }
      | Expr "-" Expr {}
      | Expr "*" Expr {}
      | Expr "/" Expr {}
@@ -168,9 +171,9 @@ Expr : "(" Expr ")" {}
      | Literal { $$ = std::move($1); }
      ;
 
-Literal : char_token { $$ = std::make_unique<ast::Literal>(@$, ast::Data(ast::DataType::CHAR, $1)); }
-        | int_token { $$ = std::make_unique<ast::Literal>(@$, ast::Data(ast::DataType::INT, $1)); }
-        | double_token { $$ = std::make_unique<ast::Literal>(@$, ast::Data(ast::DataType::DOUBLE, $1)); }
+Literal : char_token { $$ = std::make_unique<ast::Literal>(@$, lang::Data(lang::DataType::CHAR, $1)); }
+        | int_token { $$ = std::make_unique<ast::Literal>(@$, lang::Data(lang::DataType::INT, $1)); }
+        | double_token { $$ = std::make_unique<ast::Literal>(@$, lang::Data(lang::DataType::DOUBLE, $1)); }
         ;
 
 
@@ -193,6 +196,7 @@ int main(int argc, char * argv[])
 {
 	bool read_from_file = false;
 	Driver driver;
+    Driver::set_active_instance(driver);
 
 	int i;
 	for (i = 1; i < argc; i++) {
