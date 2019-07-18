@@ -67,13 +67,13 @@ loc.step();
 [1-9][0-9]* { int val = strtol(yytext, nullptr, 10);
 	      return yy::parser::make_int_token(val, loc); }
 
-"0b"[0-1]+ { int val = strtol(yytext, nullptr, 2);
+"0b"[0-1]+ { int val = strtol(&yytext[2], nullptr, 2);
 	           return yy::parser::make_int_token(val, loc); }
 
-"0"[0-7]+ { long val = strtol(yytext, nullptr, 8);
+"0"[0-7]+ { long val = strtol(&yytext[1], nullptr, 8);
 	    return yy::parser::make_int_token(val, loc); }
 
-"0x"[0-9a-fA-F]+ { int val = strtol(yytext, nullptr, 16);
+"0x"[0-9a-fA-F]+ { int val = strtol(&yytext[2], nullptr, 16);
 	           return yy::parser::make_int_token(val, loc); }
 
 [0-9]*"."[0-9]+ { double val = strtod(yytext, nullptr); 

@@ -8,7 +8,7 @@ namespace cpl::lang {
 typedef int integer_t; // Type holder for all integers types
 typedef double real_t; // Type holder for all real types
 
-enum class DataRepresent {NONE=0, INTEGER=1, REAL=2, INVALID = 3};
+enum class DataRepresent {NONE=0, INTEGER=1, REAL=2, INVALID=3};
 
 class DataInfo {
 public:

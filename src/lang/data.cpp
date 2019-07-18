@@ -61,7 +61,7 @@ Data Data::do_bin_op(BinOpId op, const Data &lhs, const Data &rhs, DataType res_
 Data& Data::fix_precision() {
     DataRepresent repr = DataInfo::type_to_represent(this->type); 
     if (repr == DataRepresent::INTEGER) {
-            this->m_data.emplace<integer_t>(std::get<integer_t>(this->m_data) % static_cast<int>(pow(2, TypeInfo::size_of(this->type) * 8)-1));
+            this->m_data.emplace<integer_t>(std::get<integer_t>(this->m_data) % static_cast<integer_t>(pow(2, TypeInfo::size_of(this->type) * 8)-1));
     } else if (repr == DataRepresent::REAL) {
         if (TypeInfo::size_of(this->type) == sizeof(float)) 
             this->m_data.emplace<real_t>(static_cast<float>(std::get<real_t>(this->m_data)));
