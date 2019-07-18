@@ -8,11 +8,12 @@
 namespace cpl::lang {
 
 /* Types for DataTypes and Data Reperesentation */
-enum class DataType {NONE=0, CHAR = 1, INT=2, DOUBLE=3, INVALID = 4};
+enum class DataType {VOID=0, CHAR = 1, INT=2, DOUBLE=3, INVALID = 4};
 
 class TypeInfo {
 private:
     inline const static std::map <DataType, std::size_t> type_to_size_table = {
+        { DataType::CHAR, 0 },
         { DataType::CHAR, 1 },
         { DataType::INT, 4 },
         { DataType::DOUBLE, 8 },
@@ -20,6 +21,7 @@ private:
     };
 
     inline const static std::map <DataType, std::string> type_to_string_table = {
+        { DataType::VOID, "void" },
         { DataType::CHAR, "char" },
         { DataType::INT, "int" },
         { DataType::DOUBLE, "double" },

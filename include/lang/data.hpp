@@ -13,6 +13,7 @@ enum class DataRepresent {NONE=0, INTEGER=1, REAL=2, INVALID = 3};
 class DataInfo {
 public:
     inline const static std::map <DataType, DataRepresent> type_to_represent_table = {
+        { DataType::VOID, DataRepresent::INVALID },
         { DataType::CHAR, DataRepresent::INTEGER },
         { DataType::INT, DataRepresent::INTEGER },
         { DataType::DOUBLE, DataRepresent::REAL },
