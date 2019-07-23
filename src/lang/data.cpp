@@ -30,20 +30,52 @@ Data Data::do_bin_op(BinOpId op, const Data &lhs, const Data &rhs, DataType res_
     DataRepresent type_repr = DataInfo::type_to_represent(to_type);
 
     if (type_repr == DataRepresent::INTEGER) {
-        integer_t i1 = std::get<integer_t>(op1.m_data); 
-        integer_t i2 = std::get<integer_t>(op2.m_data);
+        integer_t o1 = std::get<integer_t>(op1.m_data); 
+        integer_t o2 = std::get<integer_t>(op2.m_data);
         switch (op) {
-            case BinOpId::PLUS : return Data(res_type, i1 + i2).fix_precision();
-            case BinOpId::MINUS : return Data(res_type, i1 - i2).fix_precision();
+            case BinOpId::PLUS : return Data(res_type, o1 + o2).fix_precision();
+            case BinOpId::MINUS : return Data(res_type, o1 - o2).fix_precision();
+            case BinOpId::MUL : return Data(res_type, o1 * o2).fix_precision();
+            case BinOpId::DIV : return Data(res_type, o1 / o2).fix_precision();
+            case BinOpId::MOD : return Data(res_type, o1 % o2).fix_precision();
+            case BinOpId::EQ : return Data(res_type, o1 == o2).fix_precision();
+            case BinOpId::NEQ : return Data(res_type, o1 != o2).fix_precision();
+            case BinOpId::LT : return Data(res_type, o1 < o2).fix_precision();
+            case BinOpId::GT : return Data(res_type, o1 > o2).fix_precision();
+            case BinOpId::LEQ : return Data(res_type, o1 <= o2).fix_precision();
+            case BinOpId::GEQ : return Data(res_type, o1 >= o2).fix_precision();
+            case BinOpId::L_AND : return Data(res_type, o1 && o2).fix_precision();
+            case BinOpId::L_OR : return Data(res_type, o1 || o2).fix_precision();
+            case BinOpId::B_AND : return Data(res_type, o1 & o2).fix_precision();
+            case BinOpId::B_OR : return Data(res_type, o1 | o2).fix_precision();
+            case BinOpId::B_XOR : return Data(res_type, o1 ^ o2).fix_precision();
+            case BinOpId::SHL : return Data(res_type, o1 << o2).fix_precision();
+            case BinOpId::SHR : return Data(res_type, o1 >> o2).fix_precision();
             default : return Data();
         }
     }
     else if (type_repr == DataRepresent::REAL) {
-        real_t r1 = std::get<real_t>(op1.m_data); 
-        real_t r2 = std::get<real_t>(op2.m_data);
+        real_t o1 = std::get<real_t>(op1.m_data); 
+        real_t o2 = std::get<real_t>(op2.m_data);
         switch (op) {
-            case BinOpId::PLUS : return Data(res_type, r1 + r2).fix_precision();
-            case BinOpId::MINUS : return Data(res_type, r1 - r2).fix_precision();
+            case BinOpId::PLUS : return Data(res_type, o1 + o2).fix_precision();
+            case BinOpId::MINUS : return Data(res_type, o1 - o2).fix_precision();
+            case BinOpId::MUL : return Data(res_type, o1 * o2).fix_precision();
+            case BinOpId::DIV : return Data(res_type, o1 / o2).fix_precision();
+            //case BinOpId::MOD : return Data(res_type, o1 % o2).fix_precision();
+            case BinOpId::EQ : return Data(res_type, o1 == o2).fix_precision();
+            case BinOpId::NEQ : return Data(res_type, o1 != o2).fix_precision();
+            case BinOpId::LT : return Data(res_type, o1 < o2).fix_precision();
+            case BinOpId::GT : return Data(res_type, o1 > o2).fix_precision();
+            case BinOpId::LEQ : return Data(res_type, o1 <= o2).fix_precision();
+            case BinOpId::GEQ : return Data(res_type, o1 >= o2).fix_precision();
+            case BinOpId::L_AND : return Data(res_type, o1 && o2).fix_precision();
+            case BinOpId::L_OR : return Data(res_type, o1 || o2).fix_precision();
+            /*case BinOpId::B_AND : return Data(res_type, o1 & o2).fix_precision();*/
+            /*case BinOpId::B_OR : return Data(res_type, o1 | o2).fix_precision();*/
+            /*case BinOpId::B_XOR : return Data(res_type, o1 ^ o2).fix_precision();*/
+            /*case BinOpId::SHL : return Data(res_type, o1 << o2).fix_precision();*/
+            /*case BinOpId::SHR : return Data(res_type, o1 >> o2).fix_precision();*/
             default : return Data();
         }
     } else {

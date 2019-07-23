@@ -101,7 +101,7 @@ pipe_token "|"
 
 %nonassoc "!" "~"
 %nonassoc UMINUS UPLUS
-%nonassoc CALL "`"
+%nonassoc CALL
 
 %type <std::unique_ptr<ast::Statement>> Stmt Sprt_stmt
 %type <std::unique_ptr<ast::Expression>> Expr
@@ -143,28 +143,27 @@ Primitive_type : "char" | "int" | "double";
 
 Expr : "(" Expr ")" {}
      | Expr "+" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::PLUS, std::move($1), std::move($3)); }
-     | Expr "-" Expr {}
-     | Expr "*" Expr {}
-     | Expr "/" Expr {}
-     | Expr "&&" Expr { }
-     | Expr "||" Expr { }
-     | Expr "&" Expr { }
-     | Expr "|" Expr { }
-     | Expr "^" Expr { }
-     | Expr "<" Expr { }
-     | Expr ">" Expr { }
-     | Expr "<=" Expr { }
-     | Expr ">=" Expr { }
-     | Expr "<<" Expr { }
-     | Expr ">>" Expr { }
-     | Expr "==" Expr { }
-     | Expr "!=" Expr { }
-     | Expr "%" Expr { }
+     | Expr "-" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::MINUS, std::move($1), std::move($3)); }
+     | Expr "*" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::MUL, std::move($1), std::move($3)); }
+     | Expr "/" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::DIV, std::move($1), std::move($3)); }
+     | Expr "&&" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::L_AND, std::move($1), std::move($3)); }
+     | Expr "||" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::L_OR, std::move($1), std::move($3)); }
+     | Expr "&" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::B_AND, std::move($1), std::move($3)); }
+     | Expr "|" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::B_OR, std::move($1), std::move($3)); }
+     | Expr "^" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::B_XOR, std::move($1), std::move($3)); }
+     | Expr "<" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::LT, std::move($1), std::move($3)); }
+     | Expr ">" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::GT, std::move($1), std::move($3)); }
+     | Expr "<=" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::LEQ, std::move($1), std::move($3)); }
+     | Expr ">=" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::GEQ, std::move($1), std::move($3)); }
+     | Expr "<<" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::SHL, std::move($1), std::move($3)); }
+     | Expr ">>" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::SHR, std::move($1), std::move($3)); }
+     | Expr "==" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::EQ, std::move($1), std::move($3)); }
+     | Expr "!=" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::NEQ, std::move($1), std::move($3)); }
+     | Expr "%" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::MOD, std::move($1), std::move($3));  }
      | id_token "[" Expr "]" { }
      | "!" Expr { }
      | "~" Expr { }
      | Func_call %prec CALL { }
-     | Expr "`" id_token "`" Expr { }
      | "-" Expr %prec UMINUS { }
      | "+" Expr %prec UPLUS { }
      | id_token { }

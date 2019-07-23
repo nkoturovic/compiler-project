@@ -8,7 +8,7 @@
 namespace cpl::lang {
 
 /* Types for DataTypes and Data Reperesentation */
-enum class DataType {VOID=0, CHAR=1, INT=2, DOUBLE=3, INVALID=4};
+enum class DataType {VOID=0, CHAR=1, INT=2, PTR=3, DOUBLE=4, INVALID=5};
 
 class TypeInfo {
 private:
@@ -16,6 +16,7 @@ private:
         { DataType::VOID, 0 },
         { DataType::CHAR, 1 },
         { DataType::INT, 4 },
+        { DataType::PTR, 8 },
         { DataType::DOUBLE, 8 },
         { DataType::INVALID, 0 }
     };
@@ -24,6 +25,7 @@ private:
         { DataType::VOID, "void" },
         { DataType::CHAR, "char" },
         { DataType::INT, "int" },
+        { DataType::PTR, "pointer" },
         { DataType::DOUBLE, "double" },
         { DataType::INVALID, "INVALID" }
     };

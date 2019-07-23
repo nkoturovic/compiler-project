@@ -64,7 +64,7 @@ loc.step();
 "<<" { return yy::parser::make_shl_token(loc); }
 ">>" { return yy::parser::make_shr_token(loc); }
 
-[1-9][0-9]* { int val = strtol(yytext, nullptr, 10);
+0|([1-9][0-9]*) { int val = strtol(yytext, nullptr, 10);
 	      return yy::parser::make_int_token(val, loc); }
 
 "0b"[0-1]+ { int val = strtol(&yytext[2], nullptr, 2);
