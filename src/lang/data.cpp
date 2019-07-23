@@ -25,6 +25,9 @@ Data::Data(DataType type, real_t data) : type(type) { m_data.emplace<real_t>(dat
 Data Data::do_bin_op(BinOpId op, const Data &lhs, const Data &rhs, DataType res_type) {
     DataType to_type = res_type;
 
+    if (res_type == DataType::INVALID || lhs.type == DataType::INVALID || rhs.type == DataType::INVALID)
+        return Data();
+
     Data op1 = Data::convert(lhs, to_type);
     Data op2 = Data::convert(rhs, to_type);
     DataRepresent type_repr = DataInfo::type_to_represent(to_type);
@@ -36,8 +39,10 @@ Data Data::do_bin_op(BinOpId op, const Data &lhs, const Data &rhs, DataType res_
             case BinOpId::PLUS : return Data(res_type, o1 + o2).fix_precision();
             case BinOpId::MINUS : return Data(res_type, o1 - o2).fix_precision();
             case BinOpId::MUL : return Data(res_type, o1 * o2).fix_precision();
-            case BinOpId::DIV : return Data(res_type, o1 / o2).fix_precision();
-            case BinOpId::MOD : return Data(res_type, o1 % o2).fix_precision();
+            case BinOpId::DIV : if (o2 == 0) return Data();
+                                else return Data(res_type, o1 / o2).fix_precision();
+            case BinOpId::MOD : if (o2 == 0) return Data();
+                                return Data(res_type, o1 % o2).fix_precision();
             case BinOpId::EQ : return Data(res_type, o1 == o2).fix_precision();
             case BinOpId::NEQ : return Data(res_type, o1 != o2).fix_precision();
             case BinOpId::LT : return Data(res_type, o1 < o2).fix_precision();
@@ -78,16 +83,10 @@ Data Data::do_bin_op(BinOpId op, const Data &lhs, const Data &rhs, DataType res_
             /*case BinOpId::SHR : return Data(res_type, o1 >> o2).fix_precision();*/
             default : return Data();
         }
+
     } else {
         return Data();
     }
-
-/*    if (type_repr == DataRepresent::INTEGER) */
-        //return Data(to_type, std::get<integer_t>(op1.m_data) + std::get<integer_t>(op2.m_data)).fix_precision();
-    //else if (type_repr == DataRepresent::REAL) 
-        //return Data(to_type, std::get<real_t>(op1.m_data) + std::get<real_t>(op2.m_data)).fix_precision();
-    //else 
-        /*return Data();*/
 }
 
 Data Data::do_un_op(UnOpId op, const Data &expr, DataType res_type) {

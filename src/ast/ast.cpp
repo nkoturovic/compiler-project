@@ -14,12 +14,16 @@ Expression::Expression(yy::location loc) : Statement(loc) {}
 
 void Expression::interpret() const {
     Data eval = this->evaluate();
-    if (!this->opt_error.has_value()) {
-        std::cout << eval << std::endl;
+    if (eval.type == DataType::INVALID) {
+            const Driver &driver = Driver::get_active_instance();
+        if (this->opt_error.has_value()) {
+            const Error &err = opt_error.value();
+            driver.error(err.loc, err.msg);
+        } else {
+            driver.error(this->loc, "Unable to evaluate expression");
+        }
     } else {
-        const Error &err = opt_error.value();
-        const Driver &driver = Driver::get_active_instance();
-        driver.error(err.loc, err.msg);
+        std::cout << eval << std::endl; 
     }
 }
 
