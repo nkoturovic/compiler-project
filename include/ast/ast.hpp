@@ -56,5 +56,16 @@ public:
     lang::Data evaluate() const override;
 };
 
+class UnOp : public Expression {
+private:
+    lang::UnOpId m_op_id;
+    std::unique_ptr<Expression> m_expr;
+public:
+    UnOp(yy::location loc, lang::UnOpId op_id, std::unique_ptr<Expression> expr);
+    lang::DataType check_type() const override;
+    lang::Data evaluate() const override;
+};
+
+
 } // end ns
 #endif

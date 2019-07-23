@@ -90,6 +90,34 @@ Data Data::do_bin_op(BinOpId op, const Data &lhs, const Data &rhs, DataType res_
         /*return Data();*/
 }
 
+Data Data::do_un_op(UnOpId op, const Data &expr, DataType res_type) {
+    DataType to_type = res_type;
+
+    Data operand = Data::convert(expr, to_type);
+    DataRepresent type_repr = DataInfo::type_to_represent(to_type);
+
+    if (type_repr == DataRepresent::INTEGER) {
+        integer_t o = std::get<integer_t>(operand.m_data); 
+        switch (op) {
+            case UnOpId::PLUS : return Data(res_type, o).fix_precision();
+            case UnOpId::MINUS : return Data(res_type, -o).fix_precision();
+            case UnOpId::L_NOT : return Data(res_type, !o).fix_precision();
+            case UnOpId::B_NOT : return Data(res_type, ~o).fix_precision();
+            default : return Data();
+        }
+    }
+    else if (type_repr == DataRepresent::REAL) {
+        real_t o = std::get<real_t>(operand.m_data); 
+        switch (op) {
+            case UnOpId::PLUS : return Data(res_type, o).fix_precision();
+            case UnOpId::MINUS : return Data(res_type, -o).fix_precision();
+            case UnOpId::L_NOT : return Data(res_type, !o).fix_precision();
+            default : return Data();
+        }
+    }
+    return Data();
+}
+
 Data& Data::fix_precision() {
     DataRepresent repr = DataInfo::type_to_represent(this->type); 
     if (repr == DataRepresent::INTEGER) {

@@ -36,6 +36,7 @@ public:
 
     static Data convert(const Data &data, DataType type);
     static Data do_bin_op(BinOpId op, const Data &lhs, const Data &rhs, DataType res_type);
+    static Data do_un_op(UnOpId op, const Data &expr, DataType res_type);
 
     friend std::ostream& operator << (std::ostream & out, const cpl::lang::Data& data);
 };

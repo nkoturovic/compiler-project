@@ -63,6 +63,8 @@ loc.step();
 "|" { return yy::parser::make_pipe_token(loc); }
 "<<" { return yy::parser::make_shl_token(loc); }
 ">>" { return yy::parser::make_shr_token(loc); }
+"!" { return yy::parser::make_excl_token(loc); }
+"~" { return yy::parser::make_tilde_token(loc); }
 
 0|([1-9][0-9]*) { int val = strtol(yytext, nullptr, 10);
 	      return yy::parser::make_int_token(val, loc); }

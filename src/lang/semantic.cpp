@@ -48,4 +48,10 @@ DataType Semantic::binop_check(BinOpId op_id, DataType op1_t, DataType op2_t) {
     return std::max(std::max(op1_t, op2_t), DataType::INT);
 }
 
+DataType Semantic::unop_check(UnOpId op_id, DataType type) {
+    if (op_id == UnOpId::INVALID || type == DataType::INVALID || type == DataType::VOID)
+        return DataType::INVALID;
+    return type;
+}
+
 }
