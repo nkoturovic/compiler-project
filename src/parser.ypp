@@ -40,6 +40,7 @@ eof_token 0 "end of file"
 print_token "print"          
 if_token "if"          
 while_token "while"          
+void_kw_token "void"          
 int_kw_token "int"          
 double_kw_token "double"          
 char_kw_token "char"          
@@ -104,8 +105,7 @@ pipe_token "|"
 %nonassoc CALL
 
 %type <std::unique_ptr<ast::Statement>> Stmt Sprt_stmt
-%type <std::unique_ptr<ast::Expression>> Expr
-%type <std::unique_ptr<ast::Literal>> Literal
+%type <std::unique_ptr<ast::Expression>> Expr Literal
 
 %%
 /* Consider maybe using std::swap instead of std::move everywhere 
@@ -133,13 +133,22 @@ Sprt_stmt : Expr {
             $1->interpret(); 
           }
           | print_token "(" List_of_expr ")" {}
+          | Type { }
 	      ;
 
-Type : Primitive_type
+Type : Basic_type { }
+     | Pointer_type { }
      ;
 
-Primitive_type : "char" | "int" | "double";
+Basic_type : "void" { }
+           | "char" { }
+           | "int" { }
+           | "double" { }
            ;
+
+Pointer_type :  Type "*" { }
+             ;
+
 
 Expr : "(" Expr ")" { $$ = std::move($2); }
      | Expr "+" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::PLUS, std::move($1), std::move($3)); }
@@ -170,9 +179,9 @@ Expr : "(" Expr ")" { $$ = std::move($2); }
      | Literal { $$ = std::move($1); }
      ;
 
-Literal : char_token { $$ = std::make_unique<ast::Literal>(@$, lang::Data(lang::DataType::CHAR, $1)); }
-        | int_token { $$ = std::make_unique<ast::Literal>(@$, lang::Data(lang::DataType::INT, $1)); }
-        | double_token { $$ = std::make_unique<ast::Literal>(@$, lang::Data(lang::DataType::DOUBLE, $1)); }
+Literal : char_token { $$ = std::make_unique<ast::Literal>(@$, lang::Data(lang::BasicType(lang::DataTypeId::CHAR), $1)); }
+        | int_token { $$ = std::make_unique<ast::Literal>(@$, lang::Data(lang::BasicType(lang::DataTypeId::INT), $1)); }
+        | double_token { $$ = std::make_unique<ast::Literal>(@$, lang::Data(lang::BasicType(lang::DataTypeId::DOUBLE), $1)); }
         ;
 
 

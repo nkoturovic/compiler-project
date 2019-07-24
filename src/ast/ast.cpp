@@ -14,7 +14,7 @@ Expression::Expression(yy::location loc) : Statement(loc) {}
 
 void Expression::interpret() const {
     Data eval = this->evaluate();
-    if (eval.type == DataType::INVALID) {
+    if (eval.type.id == DataTypeId::INVALID) {
             const Driver &driver = Driver::get_active_instance();
         if (this->opt_error.has_value()) {
             const Error &err = opt_error.value();
@@ -30,7 +30,7 @@ void Expression::interpret() const {
 Literal::Literal(yy::location loc, Data data) : Expression(loc), m_data(data) {}
 
 DataType Literal::check_type() const {
-    if (this->m_data.type == DataType::INVALID)
+    if (this->m_data.type.id == DataTypeId::INVALID)
         this->opt_error.emplace(Error(this->loc, std::string("Invalid type of literal")));
     return m_data.type;
 }
@@ -45,22 +45,22 @@ BinOp::BinOp(yy::location loc, BinOpId op_id, std::unique_ptr<Expression> lhs, s
 DataType BinOp::check_type() const { 
     DataType lhs_type = m_lhs->check_type(), rhs_type = m_rhs->check_type();
 
-    if (lhs_type == DataType::INVALID) {
+    if (lhs_type.id == DataTypeId::INVALID) {
         if(m_lhs->opt_error.has_value())
             this->opt_error.emplace(m_lhs->opt_error.value());
-        return DataType::INVALID;
-    } else if (rhs_type == DataType::INVALID) {
+        return InvalidType();
+    } else if (rhs_type.id == DataTypeId::INVALID) {
         if (m_rhs->opt_error.has_value())
             this->opt_error.emplace(m_rhs->opt_error.value());
-        return DataType::INVALID;
+        return InvalidType();
     }
 
     DataType res = Semantic::binop_check(m_op_id, lhs_type, rhs_type);
 
-    if (res == DataType::INVALID) {
+    if (res.id == DataTypeId::INVALID) {
         std::stringstream err_msg_ss;
         err_msg_ss << "Invalid operands to BinOp " << BinOpInfo::binop_id_to_string(m_op_id)
-            << " (" << TypeInfo::type_to_string(lhs_type) << ", " << TypeInfo::type_to_string(rhs_type) << ")";
+            << " (" << lhs_type.str() << ", " << rhs_type.str() << ")";
         this->opt_error.emplace(Error(loc, err_msg_ss.str()));
     }
 
@@ -77,18 +77,18 @@ UnOp::UnOp(yy::location loc, UnOpId op_id, std::unique_ptr<Expression> expr)
 DataType UnOp::check_type() const { 
     DataType expr_type = m_expr->check_type();
 
-    if (expr_type == DataType::INVALID) {
+    if (expr_type.id == DataTypeId::INVALID) {
         if(m_expr->opt_error.has_value())
             this->opt_error.emplace(m_expr->opt_error.value());
-        return DataType::INVALID;
+        return InvalidType();
     }
 
     DataType res = Semantic::unop_check(m_op_id, expr_type);
 
-    if (res == DataType::INVALID) {
+    if (res.id == DataTypeId::INVALID) {
         std::stringstream err_msg_ss;
         err_msg_ss << "Invalid operands to UnOp " << UnOpInfo::unop_id_to_string(m_op_id)
-            << " (" << TypeInfo::type_to_string(expr_type) << ")";
+            << " (" << expr_type.str() << ")";
         this->opt_error.emplace(Error(loc, err_msg_ss.str()));
     }
 

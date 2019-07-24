@@ -9,8 +9,8 @@ namespace cpl::lang {
 class Semantic {
 public:
     Semantic() = delete;
-    static DataType binop_check(BinOpId op_id, DataType op1, DataType op2);
-    static DataType unop_check(UnOpId op_id, DataType type);
+    static DataType binop_check(BinOpId op_id, const DataType &op1, const DataType &op2);
+    static DataType unop_check(UnOpId op_id, const DataType &type);
 };
 
 }

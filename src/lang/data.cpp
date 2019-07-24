@@ -6,26 +6,19 @@
 namespace cpl::lang {
 
 DataRepresent DataInfo::type_to_represent(DataType type) {
-   return type_to_represent_table.at(type);
-}
-
-std::size_t TypeInfo::size_of(DataType type) {
-   return type_to_size_table.at(type);
-}
-
-std::string TypeInfo::type_to_string(DataType type) {
-   return type_to_string_table.at(type);
+   return type_to_represent_table.at(type.id);
 }
 
 /* Data Constructors */
-Data::Data() : type(DataType::INVALID) {}
+Data::Data() {}
 Data::Data(DataType type, integer_t data) : type(type) { m_data.emplace<integer_t>(data); this->fix_precision(); }
 Data::Data(DataType type, real_t data) : type(type) { m_data.emplace<real_t>(data); this->fix_precision(); }
 
-Data Data::do_bin_op(BinOpId op, const Data &lhs, const Data &rhs, DataType res_type) {
+Data Data::do_bin_op(BinOpId op, const Data &lhs, const Data &rhs, const DataType &res_type) {
+
     DataType to_type = res_type;
 
-    if (res_type == DataType::INVALID || lhs.type == DataType::INVALID || rhs.type == DataType::INVALID)
+    if (res_type.id == DataTypeId::INVALID || lhs.type.id == DataTypeId::INVALID || rhs.type.id == DataTypeId::INVALID)
         return Data();
 
     Data op1 = Data::convert(lhs, to_type);
@@ -83,7 +76,6 @@ Data Data::do_bin_op(BinOpId op, const Data &lhs, const Data &rhs, DataType res_
             /*case BinOpId::SHR : return Data(res_type, o1 >> o2).fix_precision();*/
             default : return Data();
         }
-
     } else {
         return Data();
     }
@@ -120,11 +112,11 @@ Data Data::do_un_op(UnOpId op, const Data &expr, DataType res_type) {
 Data& Data::fix_precision() {
     DataRepresent repr = DataInfo::type_to_represent(this->type); 
     if (repr == DataRepresent::INTEGER) {
-            this->m_data.emplace<integer_t>(std::get<integer_t>(this->m_data) % static_cast<integer_t>(pow(2, TypeInfo::size_of(this->type) * 8)-1));
+            this->m_data.emplace<integer_t>(std::get<integer_t>(this->m_data) % static_cast<integer_t>(pow(2, TypeInfo::size_of(this->type.id) * 8)-1));
     } else if (repr == DataRepresent::REAL) {
-        if (TypeInfo::size_of(this->type) == sizeof(float)) 
+        if (this->type.size() == sizeof(float)) 
             this->m_data.emplace<real_t>(static_cast<float>(std::get<real_t>(this->m_data)));
-         else if (TypeInfo::size_of(this->type) == sizeof(double))
+         else if (this->type.size() == sizeof(double))
             this->m_data.emplace<real_t>(static_cast<double>(std::get<real_t>(this->m_data)));
     }
     return *this;
@@ -134,7 +126,7 @@ Data Data::convert(const Data &from, DataType type) {
     Data to = from;
     to.type = type;
 
-    if (from.type == to.type)
+    if (from.type.id == to.type.id)
         return to;
 
     DataRepresent from_repr = DataInfo::type_to_represent(from.type); 
@@ -147,7 +139,7 @@ Data Data::convert(const Data &from, DataType type) {
         else if (from_repr == DataRepresent::REAL && to_repr == DataRepresent::INTEGER)
             to.m_data.emplace<integer_t>(std::get<real_t>(to.m_data));
         else
-            to.type = DataType::INVALID;
+            to.type.id = DataTypeId::INVALID;
     }
 
     to.fix_precision(); 
@@ -161,13 +153,13 @@ std::ostream& operator << (std::ostream &out, const cpl::lang::Data& data) {
 
     if (rep == DataRepresent::INTEGER) {
         integer_t val = std::get<integer_t>(data.m_data);
-        if (data.type == DataType::CHAR)
+        if (data.type.id == DataTypeId::CHAR)
             out << static_cast<char>(val);
-        else if (data.type == DataType::INT)
+        else if (data.type.id == DataTypeId::INT)
             out << static_cast<int>(val);
     } else if (rep == DataRepresent::REAL) {
         real_t val = std::get<real_t>(data.m_data);
-        if (data.type == DataType::DOUBLE)
+        if (data.type.id == DataTypeId::DOUBLE)
             out << val;
     }
     return out;

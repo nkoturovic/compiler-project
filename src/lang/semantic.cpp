@@ -2,30 +2,35 @@
 
 namespace cpl::lang {
 
-DataType Semantic::binop_check(BinOpId op_id, DataType op1_t, DataType op2_t) {
+DataType Semantic::binop_check(BinOpId op_id, const DataType &op1_t, const DataType &op2_t) {
     // INVALID op ANY -> INVALID
-    if (op1_t == DataType::INVALID || op2_t == DataType::INVALID)
-        return DataType::INVALID;
+    if (op1_t.id == DataTypeId::INVALID || op2_t.id == DataTypeId::INVALID)
+        return InvalidType();
 
     // VOID op ANY -> INVALID
-    if (op1_t == DataType::VOID || op2_t == DataType::VOID)
-        return DataType::INVALID;
+    if (op1_t.id == DataTypeId::VOID || op2_t.id == DataTypeId::VOID)
+        return InvalidType();
 
     // mod INT, INT -> INT else ERROR
     if (op_id == BinOpId::MOD || op_id == BinOpId::SHL || op_id == BinOpId::SHR) {
-        if (op1_t <= DataType::INT && op2_t <= DataType::INT)
-            return DataType::INT;
+        if (op1_t.id <= DataTypeId::INT && op2_t.id <= DataTypeId::INT)
+            return BasicType(DataTypeId::INT);
         else 
-            return DataType::INVALID;
+            return InvalidType();
     }
 
     // PTR +- INT -> PTR else ERROR
-    if ((op1_t == DataType::PTR && op2_t <= DataType::INT) ||
-     (op1_t <= DataType::INT && op2_t == DataType::PTR)) {
+    if (op1_t.id == DataTypeId::PTR && op2_t.id <= DataTypeId::INT) {
         if (op_id != BinOpId::PLUS && op_id != BinOpId::MINUS) 
-            return DataType::INVALID;
+            return InvalidType();
         else 
-            return DataType::PTR;
+            return op1_t;
+       
+    } else if (op1_t.id <= DataTypeId::INT && op2_t.id == DataTypeId::PTR) {
+        if (op_id != BinOpId::PLUS && op_id != BinOpId::MINUS) 
+            return InvalidType();
+        else 
+            return op2_t;
     }
 
     // Down and up cast to INT for some operators
@@ -41,16 +46,16 @@ DataType Semantic::binop_check(BinOpId op_id, DataType op1_t, DataType op2_t) {
        case BinOpId::B_AND:
        case BinOpId::B_OR:
        case BinOpId::B_XOR:
-           return DataType::INT;
+           return BasicType(DataTypeId::INT);
        default: break;
     }
 
-    return std::max(std::max(op1_t, op2_t), DataType::INT);
+    return std::max(std::max(op1_t, op2_t), (DataType) BasicType(DataTypeId::INT));
 }
 
-DataType Semantic::unop_check(UnOpId op_id, DataType type) {
-    if (op_id == UnOpId::INVALID || type == DataType::INVALID || type == DataType::VOID)
-        return DataType::INVALID;
+DataType Semantic::unop_check(UnOpId op_id, const DataType &type) {
+    if (op_id == UnOpId::INVALID || type.id == DataTypeId::INVALID || type.id == DataTypeId::VOID)
+        return InvalidType();
     return type;
 }
 

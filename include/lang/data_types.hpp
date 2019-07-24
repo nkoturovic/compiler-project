@@ -8,34 +8,68 @@
 namespace cpl::lang {
 
 /* Types for DataTypes and Data Reperesentation */
-enum class DataType {VOID=0, CHAR=1, INT=2, PTR=3, DOUBLE=4, INVALID=5};
+enum class DataTypeId {VOID=0, CHAR=1, INT=2, PTR=3, DOUBLE=4, INVALID=5};
+
+class DataType {
+public:
+    DataTypeId id;
+    std::size_t size();
+    std::string str();
+
+    virtual bool operator==(const DataType &rhs) const;
+    bool operator!=(const DataType &rhs) const;
+    bool operator<(const DataType &rhs) const;
+    bool operator<=(const DataType &rhs) const;
+    bool operator>(const DataType &rhs) const;
+    bool operator>=(const DataType &rhs) const;
+
+protected:
+    DataType(DataTypeId type_id);
+ };
+
+class InvalidType : public DataType {
+public:
+    InvalidType();
+};
+
+class BasicType : public DataType {
+public:
+    BasicType(DataTypeId type_id);
+};
+
+class PointerType : public DataType {
+public:
+    DataType ptr_to_type = InvalidType();
+    PointerType(DataType ptr_to_type);
+    bool operator==(const PointerType &rhs) const;
+};
 
 class TypeInfo {
 private:
-    inline const static std::map <DataType, std::size_t> type_to_size_table = {
-        { DataType::VOID, 0 },
-        { DataType::CHAR, 1 },
-        { DataType::INT, 4 },
-        { DataType::PTR, 8 },
-        { DataType::DOUBLE, 8 },
-        { DataType::INVALID, 0 }
+    inline const static std::map <DataTypeId, std::size_t> type_to_size_table = {
+        { DataTypeId::VOID, 0 },
+        { DataTypeId::CHAR, 1 },
+        { DataTypeId::INT, 4 },
+        { DataTypeId::PTR, 8 },
+        { DataTypeId::DOUBLE, 8 },
+        { DataTypeId::INVALID, 0 }
     };
 
-    inline const static std::map <DataType, std::string> type_to_string_table = {
-        { DataType::VOID, "void" },
-        { DataType::CHAR, "char" },
-        { DataType::INT, "int" },
-        { DataType::PTR, "pointer" },
-        { DataType::DOUBLE, "double" },
-        { DataType::INVALID, "INVALID" }
+    inline const static std::map <DataTypeId, std::string> type_to_string_table = {
+        { DataTypeId::VOID, "void" },
+        { DataTypeId::CHAR, "char" },
+        { DataTypeId::INT, "int" },
+        { DataTypeId::PTR, "pointer" },
+        { DataTypeId::DOUBLE, "double" },
+        { DataTypeId::INVALID, "INVALID" }
     };
 
 public: 
     TypeInfo() = delete;
 
     // Functions
-    static std::string type_to_string(DataType type);
-    static std::size_t size_of(DataType type);
+    static std::string type_to_string(DataTypeId type_id);
+    static std::size_t size_of(DataTypeId type_id);
 };
 
 } // end ns

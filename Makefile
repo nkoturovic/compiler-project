@@ -1,7 +1,7 @@
 # Compiler variables
 GOAL = mylang.out
 CXX = g++
-CXXFLAGS = -std=c++2a -Wall -Wextra -Wno-unused -g
+CXXFLAGS = -std=c++17 -Wall -Wextra -Wno-unused -g
 
 # Relevant directories
 INC_DIR = include
