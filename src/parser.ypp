@@ -92,6 +92,9 @@ pipe_token "|"
 %token <char> char_token "Char literal";
 %token <string> string_token "String literal";
 
+%type <poly_val<ast::Statement>> Stmt Sprt_stmt
+%type <poly_val<ast::Expression>> Expr Literal
+
 %left "="
 %left "&&"
 %left "||"
@@ -112,9 +115,6 @@ pipe_token "|"
 %nonassoc "!" "~"
 %nonassoc UMINUS UPLUS
 %nonassoc CALL
-
-%type <poly_val<ast::Statement>> Stmt Sprt_stmt
-%type <poly_expr> Expr Literal
 
 %%
 
