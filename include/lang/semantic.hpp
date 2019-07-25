@@ -7,12 +7,15 @@
 namespace cpl::lang {
 
 class Semantic {
-public:
+   public:
     Semantic() = delete;
-    static jbcoe::polymorphic_value<DataType> binop_check(BinOpId op_id, const jbcoe::polymorphic_value<DataType> &op1, const jbcoe::polymorphic_value<DataType> &op2);
-    static jbcoe::polymorphic_value<DataType> unop_check(UnOpId op_id, const jbcoe::polymorphic_value<DataType> &type);
+    static jbcoe::polymorphic_value<DataType> binop_check(
+        BinOpId op_id, const jbcoe::polymorphic_value<DataType> &op1,
+        const jbcoe::polymorphic_value<DataType> &op2);
+    static jbcoe::polymorphic_value<DataType> unop_check(
+        UnOpId op_id, const jbcoe::polymorphic_value<DataType> &type);
 };
 
-}
+}  // namespace cpl::lang
 
 #endif

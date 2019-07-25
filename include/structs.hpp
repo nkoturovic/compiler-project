@@ -12,6 +12,6 @@ struct Error {
     Error(yy::location loc, std::string msg);
 };
 
-}
+}  // namespace cpl
 
 #endif

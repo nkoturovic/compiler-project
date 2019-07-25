@@ -13,15 +13,6 @@
 #include "../include/lang/operators.hpp"
 #include "../include/structs.hpp"
 
-/* Polymorphic expression constructor (shortening name) */
-inline auto poly_expr(auto derived) {
-    return jbcoe::polymorphic_value<ast::Expression>(derived);
-}
-
-inline auto poly_type(auto derived) {
-    return jbcoe::polymorphic_value<lang::DataType>(derived);
-}
-
 /* Syntax error function */
 void yy::parser::error(const location_type& l, const string& msg) {
 	driver.error(l, msg);
@@ -40,10 +31,16 @@ void yy::parser::error(const location_type& l, const string& msg) {
 
 /* Pass to flex */
 %code requires {
-class Driver;
-using namespace std;
-using namespace cpl;
+    class Driver;
+    using namespace std;
+    using namespace cpl;
+
+    template <typename T>
+    using poly_val = jbcoe::polymorphic_value<T>;
+    using poly_expr = poly_val<cpl::ast::Expression>;
+    using poly_type = poly_val<cpl::lang::DataType>;
 }
+
 %param { Driver &driver }
 
 /* Token definitions */
@@ -116,8 +113,8 @@ pipe_token "|"
 %nonassoc UMINUS UPLUS
 %nonassoc CALL
 
-%type <jbcoe::polymorphic_value<ast::Statement>> Stmt Sprt_stmt
-%type <jbcoe::polymorphic_value<ast::Expression>> Expr Literal
+%type <poly_val<ast::Statement>> Stmt Sprt_stmt
+%type <poly_expr> Expr Literal
 
 %%
 
@@ -213,25 +210,25 @@ LVal : id_token { }
 
 int main(int argc, char * argv[])
 {
-	bool read_from_file = false;
-	Driver driver;
+    bool read_from_file = false;
+    Driver driver;
     Driver::set_active_instance(driver);
 
-	int i;
-	for (i = 1; i < argc; i++) {
-		if (argv[i] == string("-p")) {
-			driver.trace_parsing = true;
-		} else if (argv[i] == string("-s")) {
-			driver.trace_scanning = true;
-		} else {
-			read_from_file = true;
-		}
-	}
+    int i;
+    for (i = 1; i < argc; i++) {
+        if (argv[i] == string("-p")) {
+            driver.trace_parsing = true;
+        } else if (argv[i] == string("-s")) {
+            driver.trace_scanning = true;
+        } else {
+            read_from_file = true;
+        }
+    }
 
-	if (read_from_file)
-		driver.parse(argv[i-1]);
-	else
-		driver.parse();
+    if (read_from_file)
+        driver.parse(argv[i-1]);
+    else
+    driver.parse();
 
 	return 0;
 }
