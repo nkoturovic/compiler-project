@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <cstring>
 #include "../include/third_party/polymorphic_value.h"
 #include "../include/driver.hpp"
 #include "../include/ast/ast.hpp"
@@ -13,8 +14,12 @@
 #include "../include/structs.hpp"
 
 /* Polymorphic expression constructor (shortening name) */
-inline jbcoe::polymorphic_value<ast::Expression> poly_expr(auto derived) {
+inline auto poly_expr(auto derived) {
     return jbcoe::polymorphic_value<ast::Expression>(derived);
+}
+
+inline auto poly_type(auto derived) {
+    return jbcoe::polymorphic_value<lang::DataType>(derived);
 }
 
 /* Syntax error function */
@@ -179,13 +184,15 @@ Expr : "(" Expr ")" { $$ = move($2); }
      | Func_call %prec CALL { }
      | "-" Expr %prec UMINUS { $$ = poly_expr(ast::UnOp(@$, lang::UnOpId::MINUS, move($2))); }
      | "+" Expr %prec UPLUS { $$ = poly_expr(ast::UnOp(@$, lang::UnOpId::PLUS, move($2))); }
-     | id_token { }
+     | id_token { $$ = poly_expr(ast::Literal(@$, lang::Data(poly_type(lang::BasicType(lang::DataTypeId::INT)), 0)));  }
      | Literal { $$ = move($1); }
      ;
 
-Literal : char_token { $$ = poly_expr(ast::Literal(@$, lang::Data(lang::BasicType(lang::DataTypeId::CHAR), $1))); }
-        | int_token { $$ = poly_expr(ast::Literal(@$, lang::Data(lang::BasicType(lang::DataTypeId::INT), $1))); }
-        | double_token { $$ = poly_expr(ast::Literal(@$, lang::Data(lang::BasicType(lang::DataTypeId::DOUBLE), $1))); }
+Literal : char_token { $$ = poly_expr(ast::Literal(@$, lang::Data(poly_type(lang::BasicType(lang::DataTypeId::CHAR)), $1))); }
+        | int_token { $$ = poly_expr(ast::Literal(@$, lang::Data(poly_type(lang::BasicType(lang::DataTypeId::INT)), $1))); }
+        | double_token { $$ = poly_expr(ast::Literal(@$, lang::Data(poly_type(lang::BasicType(lang::DataTypeId::DOUBLE)), $1))); }
+        | string_token { $$ = poly_expr(ast::Literal(@$, lang::Data(poly_type(lang::PointerType(poly_type(lang::BasicType(lang::DataTypeId::CHAR)))), "REPLACE ME"))); 
+        }
         ;
 
 

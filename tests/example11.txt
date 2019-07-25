@@ -1,0 +1,8 @@
+{
+    "Hello world";
+    "hello example here go gog go gog og" + 3 - 2;
+    "hello djakd ad djo dj oj oj oj oj jij" + 2 + 1;
+    2 + "hello djakd ad djo dj oj oj oj oj jij" + 2 + 1;
+    "Next is error: ";
+    "sum this" + 2 + 3.1415;
+}

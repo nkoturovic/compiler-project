@@ -4,17 +4,17 @@
 #include <map>
 #include <variant>
 #include "operators.hpp"
+#include "../third_party/polymorphic_value.h"
 
 namespace cpl::lang {
 
-/* Types for DataTypes and Data Reperesentation */
-enum class DataTypeId {VOID=0, CHAR=1, INT=2, PTR=3, DOUBLE=4, INVALID=5};
+enum class DataTypeId {VOID=0, CHAR=1, INT=2, DOUBLE=3, PTR=4, INVALID=5};
 
 class DataType {
 public:
     DataTypeId id;
-    std::size_t size();
-    std::string str();
+    virtual std::size_t size() const = 0;
+    virtual std::string str() const = 0;
 
     virtual bool operator==(const DataType &rhs) const;
     bool operator!=(const DataType &rhs) const;
@@ -28,50 +28,50 @@ protected:
  };
 
 class InvalidType : public DataType {
+private:
+    static constexpr std::size_t m_type_size = 0;
+    static constexpr const char * m_str ="Invalid Type";
 public:
     InvalidType();
+
+    std::size_t size() const override;
+    std::string str() const override;
 };
 
 class BasicType : public DataType {
-public:
-    BasicType(DataTypeId type_id);
-};
-
-class PointerType : public DataType {
-public:
-    DataType ptr_to_type = InvalidType();
-    PointerType(DataType ptr_to_type);
-    bool operator==(const PointerType &rhs) const;
-};
-
-class TypeInfo {
 private:
-    inline const static std::map <DataTypeId, std::size_t> type_to_size_table = {
+    inline const static std::map <DataTypeId, std::size_t> m_basic_type_to_size_table = {
         { DataTypeId::VOID, 0 },
         { DataTypeId::CHAR, 1 },
         { DataTypeId::INT, 4 },
-        { DataTypeId::PTR, 8 },
         { DataTypeId::DOUBLE, 8 },
-        { DataTypeId::INVALID, 0 }
     };
 
-    inline const static std::map <DataTypeId, std::string> type_to_string_table = {
+    inline const static std::map <DataTypeId, std::string> m_basic_type_to_string_table = {
         { DataTypeId::VOID, "void" },
         { DataTypeId::CHAR, "char" },
         { DataTypeId::INT, "int" },
-        { DataTypeId::PTR, "pointer" },
         { DataTypeId::DOUBLE, "double" },
-        { DataTypeId::INVALID, "INVALID" }
     };
 
-public: 
-    TypeInfo() = delete;
+public:
+    BasicType(DataTypeId type_id);
 
-    // Functions
-    static std::string type_to_string(DataTypeId type_id);
-    static std::size_t size_of(DataTypeId type_id);
+    std::size_t size() const override;
+    std::string str() const override;
 };
 
+class PointerType : public DataType {
+private:
+    static constexpr std::size_t m_type_size = 8;
+public:
+    jbcoe::polymorphic_value<DataType> points_to;
+    PointerType(jbcoe::polymorphic_value<DataType> points_to);
+    bool operator==(const PointerType &rhs) const;
+
+    std::size_t size() const override;
+    std::string str() const override;
+};
 } // end ns
 
 #endif

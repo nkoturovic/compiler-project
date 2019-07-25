@@ -32,7 +32,7 @@ class Expression : public Statement {
 public:
     Expression(yy::location loc);
 
-    virtual lang::DataType check_type() const = 0;
+    virtual jbcoe::polymorphic_value<lang::DataType> check_type() const = 0;
     virtual lang::Data evaluate() const = 0;
     void interpret() const;
 };
@@ -42,7 +42,7 @@ private:
     lang::Data m_data;
 public:
     Literal(yy::location loc, lang::Data data);
-    lang::DataType check_type() const override;
+    jbcoe::polymorphic_value<lang::DataType> check_type() const override;
     lang::Data evaluate() const override;
 };
 
@@ -52,7 +52,7 @@ private:
     jbcoe::polymorphic_value<Expression> m_lhs, m_rhs;
 public:
     BinOp(yy::location loc, lang::BinOpId op_id, jbcoe::polymorphic_value<Expression> lhs, jbcoe::polymorphic_value<Expression> rhs);
-    lang::DataType check_type() const override;
+    jbcoe::polymorphic_value<lang::DataType> check_type() const override;
     lang::Data evaluate() const override;
 };
 
@@ -62,7 +62,7 @@ private:
     jbcoe::polymorphic_value<Expression> m_expr;
 public:
     UnOp(yy::location loc, lang::UnOpId op_id, jbcoe::polymorphic_value<Expression> expr);
-    lang::DataType check_type() const override;
+    jbcoe::polymorphic_value<lang::DataType> check_type() const override;
     lang::Data evaluate() const override;
 };
 
