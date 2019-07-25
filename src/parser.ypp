@@ -5,14 +5,20 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include "../include/third_party/polymorphic_value.h"
 #include "../include/driver.hpp"
 #include "../include/ast/ast.hpp"
 #include "../include/lang/data_types.hpp"
 #include "../include/lang/operators.hpp"
 #include "../include/structs.hpp"
 
+/* Polymorphic expression constructor (shortening name) */
+inline jbcoe::polymorphic_value<ast::Expression> poly_expr(auto derived) {
+    return jbcoe::polymorphic_value<ast::Expression>(derived);
+}
+
 /* Syntax error function */
-void yy::parser::error(const location_type& l, const std::string& msg) {
+void yy::parser::error(const location_type& l, const string& msg) {
 	driver.error(l, msg);
 }
 %}
@@ -30,6 +36,7 @@ void yy::parser::error(const location_type& l, const std::string& msg) {
 /* Pass to flex */
 %code requires {
 class Driver;
+using namespace std;
 using namespace cpl;
 }
 %param { Driver &driver }
@@ -77,11 +84,11 @@ dbl_pipe_token "||"
 pipe_token "|"
 
 /* No union needed, we are using bison variant */
-%token <std::string> id_token "identifier";
+%token <string> id_token "identifier";
 %token <int> int_token "Integer literal";
 %token <double> double_token "Floating point literal";
 %token <char> char_token "Char literal";
-%token <std::string> string_token "String literal";
+%token <string> string_token "String literal";
 
 %left "="
 %left "&&"
@@ -104,13 +111,10 @@ pipe_token "|"
 %nonassoc UMINUS UPLUS
 %nonassoc CALL
 
-%type <std::unique_ptr<ast::Statement>> Stmt Sprt_stmt
-%type <std::unique_ptr<ast::Expression>> Expr Literal
+%type <jbcoe::polymorphic_value<ast::Statement>> Stmt Sprt_stmt
+%type <jbcoe::polymorphic_value<ast::Expression>> Expr Literal
 
 %%
-/* Consider maybe using std::swap instead of std::move everywhere 
- * because there is discussion about potential move problems with 
- * bison variant types */
 
 Program : Block {}
 
@@ -150,38 +154,38 @@ Pointer_type :  Type "*" { }
              ;
 
 
-Expr : "(" Expr ")" { $$ = std::move($2); }
-     | Expr "+" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::PLUS, std::move($1), std::move($3)); }
-     | Expr "-" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::MINUS, std::move($1), std::move($3)); }
-     | Expr "*" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::MUL, std::move($1), std::move($3)); }
-     | Expr "/" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::DIV, std::move($1), std::move($3)); }
-     | Expr "&&" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::L_AND, std::move($1), std::move($3)); }
-     | Expr "||" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::L_OR, std::move($1), std::move($3)); }
-     | Expr "&" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::B_AND, std::move($1), std::move($3)); }
-     | Expr "|" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::B_OR, std::move($1), std::move($3)); }
-     | Expr "^" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::B_XOR, std::move($1), std::move($3)); }
-     | Expr "<" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::LT, std::move($1), std::move($3)); }
-     | Expr ">" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::GT, std::move($1), std::move($3)); }
-     | Expr "<=" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::LEQ, std::move($1), std::move($3)); }
-     | Expr ">=" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::GEQ, std::move($1), std::move($3)); }
-     | Expr "<<" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::SHL, std::move($1), std::move($3)); }
-     | Expr ">>" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::SHR, std::move($1), std::move($3)); }
-     | Expr "==" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::EQ, std::move($1), std::move($3)); }
-     | Expr "!=" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::NEQ, std::move($1), std::move($3)); }
-     | Expr "%" Expr { $$ = std::make_unique<ast::BinOp>(@$, lang::BinOpId::MOD, std::move($1), std::move($3));  }
+Expr : "(" Expr ")" { $$ = move($2); }
+     | Expr "+" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::PLUS, move($1), move($3))); }
+     | Expr "-" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::MINUS, move($1), move($3))); }
+     | Expr "*" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::MUL, move($1), move($3))); }
+     | Expr "/" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::DIV, move($1), move($3))); }
+     | Expr "&&" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::L_AND, move($1), move($3))); }
+     | Expr "||" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::L_OR, move($1), move($3))); }
+     | Expr "&" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::B_AND, move($1), move($3))); }
+     | Expr "|" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::B_OR, move($1), move($3))); }
+     | Expr "^" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::B_XOR, move($1), move($3))); }
+     | Expr "<" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::LT, move($1), move($3))); }
+     | Expr ">" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::GT, move($1), move($3))); }
+     | Expr "<=" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::LEQ, move($1), move($3))); }
+     | Expr ">=" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::GEQ, move($1), move($3))); }
+     | Expr "<<" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::SHL, move($1), move($3))); }
+     | Expr ">>" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::SHR, move($1), move($3))); }
+     | Expr "==" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::EQ, move($1), move($3))); }
+     | Expr "!=" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::NEQ, move($1), move($3))); }
+     | Expr "%" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::MOD, move($1), move($3)));  }
      | id_token "[" Expr "]" { }
-     | "!" Expr { $$ = std::make_unique<ast::UnOp>(@$, lang::UnOpId::L_NOT, std::move($2)); }
-     | "~" Expr { $$ = std::make_unique<ast::UnOp>(@$, lang::UnOpId::B_NOT, std::move($2)); }
+     | "!" Expr { $$ = poly_expr(ast::UnOp(@$, lang::UnOpId::L_NOT, move($2))); }
+     | "~" Expr { $$ = poly_expr(ast::UnOp(@$, lang::UnOpId::B_NOT, move($2))); }
      | Func_call %prec CALL { }
-     | "-" Expr %prec UMINUS { $$ = std::make_unique<ast::UnOp>(@$, lang::UnOpId::MINUS, std::move($2)); }
-     | "+" Expr %prec UPLUS { $$ = std::make_unique<ast::UnOp>(@$, lang::UnOpId::PLUS, std::move($2)); }
+     | "-" Expr %prec UMINUS { $$ = poly_expr(ast::UnOp(@$, lang::UnOpId::MINUS, move($2))); }
+     | "+" Expr %prec UPLUS { $$ = poly_expr(ast::UnOp(@$, lang::UnOpId::PLUS, move($2))); }
      | id_token { }
-     | Literal { $$ = std::move($1); }
+     | Literal { $$ = move($1); }
      ;
 
-Literal : char_token { $$ = std::make_unique<ast::Literal>(@$, lang::Data(lang::BasicType(lang::DataTypeId::CHAR), $1)); }
-        | int_token { $$ = std::make_unique<ast::Literal>(@$, lang::Data(lang::BasicType(lang::DataTypeId::INT), $1)); }
-        | double_token { $$ = std::make_unique<ast::Literal>(@$, lang::Data(lang::BasicType(lang::DataTypeId::DOUBLE), $1)); }
+Literal : char_token { $$ = poly_expr(ast::Literal(@$, lang::Data(lang::BasicType(lang::DataTypeId::CHAR), $1))); }
+        | int_token { $$ = poly_expr(ast::Literal(@$, lang::Data(lang::BasicType(lang::DataTypeId::INT), $1))); }
+        | double_token { $$ = poly_expr(ast::Literal(@$, lang::Data(lang::BasicType(lang::DataTypeId::DOUBLE), $1))); }
         ;
 
 
@@ -208,9 +212,9 @@ int main(int argc, char * argv[])
 
 	int i;
 	for (i = 1; i < argc; i++) {
-		if (argv[i] == std::string ("-p")) {
+		if (argv[i] == string("-p")) {
 			driver.trace_parsing = true;
-		} else if (argv[i] == std::string ("-s")) {
+		} else if (argv[i] == string("-s")) {
 			driver.trace_scanning = true;
 		} else {
 			read_from_file = true;

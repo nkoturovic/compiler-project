@@ -86,15 +86,15 @@ loc.step();
 	   return yy::parser::make_char_token(yytext[1], loc); }
 
 \"(\\.|[^"\\])*\" {
-	   std::string_view val(yytext); 
-	   return yy::parser::make_string_token(std::string(val.substr(1, val.length() - 2)), loc); }
+	   string_view val(yytext); 
+	   return yy::parser::make_string_token(string(val.substr(1, val.length() - 2)), loc); }
 
 [\t ] { loc.step(); }
 
 "\n" { loc.lines(yyleng); loc.step(); }
 
 . { throw yy::parser::syntax_error(loc,
-		"Lexical error, invalid character: " + std::string(yytext)); }
+		"Lexical error, invalid character: " + string(yytext)); }
 
 <<EOF>>	{ return yy::parser::make_eof_token(loc); }
 

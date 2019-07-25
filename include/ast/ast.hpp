@@ -4,8 +4,8 @@
 #include <map>
 #include <variant>
 #include <sstream>
-#include <memory>
 #include <queue>
+#include "../third_party/polymorphic_value.h"
 #include "../location.hh"
 #include "../structs.hpp"
 #include "../lang/data_types.hpp"
@@ -49,9 +49,9 @@ public:
 class BinOp : public Expression {
 private:
     lang::BinOpId m_op_id;
-    std::unique_ptr<Expression> m_lhs, m_rhs;
+    jbcoe::polymorphic_value<Expression> m_lhs, m_rhs;
 public:
-    BinOp(yy::location loc, lang::BinOpId op_id, std::unique_ptr<Expression> lhs, std::unique_ptr<Expression> rhs);
+    BinOp(yy::location loc, lang::BinOpId op_id, jbcoe::polymorphic_value<Expression> lhs, jbcoe::polymorphic_value<Expression> rhs);
     lang::DataType check_type() const override;
     lang::Data evaluate() const override;
 };
@@ -59,9 +59,9 @@ public:
 class UnOp : public Expression {
 private:
     lang::UnOpId m_op_id;
-    std::unique_ptr<Expression> m_expr;
+    jbcoe::polymorphic_value<Expression> m_expr;
 public:
-    UnOp(yy::location loc, lang::UnOpId op_id, std::unique_ptr<Expression> expr);
+    UnOp(yy::location loc, lang::UnOpId op_id, jbcoe::polymorphic_value<Expression> expr);
     lang::DataType check_type() const override;
     lang::Data evaluate() const override;
 };

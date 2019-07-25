@@ -39,7 +39,7 @@ Data Literal::evaluate() const {
     return m_data;
 }
 
-BinOp::BinOp(yy::location loc, BinOpId op_id, std::unique_ptr<Expression> lhs, std::unique_ptr<Expression> rhs) 
+BinOp::BinOp(yy::location loc, BinOpId op_id, jbcoe::polymorphic_value<Expression> lhs, jbcoe::polymorphic_value<Expression> rhs) 
     : Expression(loc), m_op_id(op_id), m_lhs(std::move(lhs)), m_rhs(std::move(rhs)) {}
 
 DataType BinOp::check_type() const { 
@@ -71,7 +71,7 @@ Data BinOp::evaluate() const {
     return Data::do_bin_op(m_op_id, m_lhs->evaluate(), m_rhs->evaluate(), this->check_type());
 }
 
-UnOp::UnOp(yy::location loc, UnOpId op_id, std::unique_ptr<Expression> expr) 
+UnOp::UnOp(yy::location loc, UnOpId op_id, jbcoe::polymorphic_value<Expression> expr) 
     : Expression(loc), m_op_id(op_id), m_expr(std::move(expr)) {}
 
 DataType UnOp::check_type() const { 
