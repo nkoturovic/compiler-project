@@ -12,18 +12,18 @@ namespace cpl::ast {
 /* Exceptions */
 // AST
 class AstNode {
+   protected:
+    AstNode(yy::location loc);
+
    public:
     mutable std::optional<Error> opt_error{std::nullopt};
     yy::location loc;
-
-    AstNode(yy::location loc);
     virtual ~AstNode() = default;
 };
 
 class Statement : public AstNode {
    public:
     Statement(yy::location loc);
-    virtual ~Statement() = default;
 
     virtual void interpret() const = 0;
 };
@@ -31,11 +31,10 @@ class Statement : public AstNode {
 class Expression : public Statement {
    public:
     Expression(yy::location loc);
-    virtual ~Expression() = default;
 
     virtual jbcoe::polymorphic_value<lang::DataType> check_type() const = 0;
     virtual lang::Data evaluate() const = 0;
-    void interpret() const;
+    virtual void interpret() const override;
 };
 
 class Literal : public Expression {
@@ -44,8 +43,9 @@ class Literal : public Expression {
 
    public:
     Literal(yy::location loc, lang::Data data);
-    jbcoe::polymorphic_value<lang::DataType> check_type() const override;
-    lang::Data evaluate() const override;
+    virtual jbcoe::polymorphic_value<lang::DataType> check_type()
+        const override;
+    virtual lang::Data evaluate() const override;
 };
 
 class BinOp : public Expression {
@@ -57,8 +57,9 @@ class BinOp : public Expression {
     BinOp(yy::location loc, lang::BinOpId op_id,
           jbcoe::polymorphic_value<Expression> lhs,
           jbcoe::polymorphic_value<Expression> rhs);
-    jbcoe::polymorphic_value<lang::DataType> check_type() const override;
-    lang::Data evaluate() const override;
+    virtual jbcoe::polymorphic_value<lang::DataType> check_type()
+        const override;
+    virtual lang::Data evaluate() const override;
 };
 
 class UnOp : public Expression {
@@ -69,8 +70,9 @@ class UnOp : public Expression {
    public:
     UnOp(yy::location loc, lang::UnOpId op_id,
          jbcoe::polymorphic_value<Expression> expr);
-    jbcoe::polymorphic_value<lang::DataType> check_type() const override;
-    lang::Data evaluate() const override;
+    virtual jbcoe::polymorphic_value<lang::DataType> check_type()
+        const override;
+    virtual lang::Data evaluate() const override;
 };
 
 }  // namespace cpl::ast

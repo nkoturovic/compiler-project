@@ -36,14 +36,14 @@ class DataType {
 
 class InvalidType : public DataType {
    private:
-    static constexpr std::size_t m_type_size = 0;
+    static constexpr const std::size_t m_type_size = 0;
     static constexpr const char *m_str = "Invalid Type";
 
    public:
     InvalidType();
 
-    std::size_t size() const override;
-    std::string str() const override;
+    virtual std::size_t size() const override;
+    virtual std::string str() const override;
 };
 
 class BasicType : public DataType {
@@ -67,21 +67,23 @@ class BasicType : public DataType {
    public:
     BasicType(DataTypeId type_id);
 
-    std::size_t size() const override;
-    std::string str() const override;
+    virtual std::size_t size() const override;
+    virtual std::string str() const override;
 };
 
 class PointerType : public DataType {
    private:
-    static constexpr std::size_t m_type_size = 8;
+    static constexpr const std::size_t m_type_size = 8;
 
    public:
     jbcoe::polymorphic_value<DataType> points_to;
-    PointerType(jbcoe::polymorphic_value<DataType> points_to);
-    bool operator==(const PointerType &rhs) const;
 
-    std::size_t size() const override;
-    std::string str() const override;
+    PointerType(jbcoe::polymorphic_value<DataType> points_to);
+
+    virtual std::size_t size() const override;
+    virtual std::string str() const override;
+
+    bool operator==(const PointerType &rhs) const;
 };
 }  // namespace cpl::lang
 
