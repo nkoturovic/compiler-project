@@ -15,18 +15,23 @@ class AstNode {
    public:
     mutable std::optional<Error> opt_error{std::nullopt};
     yy::location loc;
+
     AstNode(yy::location loc);
+    virtual ~AstNode() = default;
 };
 
 class Statement : public AstNode {
    public:
     Statement(yy::location loc);
+    virtual ~Statement() = default;
+
     virtual void interpret() const = 0;
 };
 
 class Expression : public Statement {
    public:
     Expression(yy::location loc);
+    virtual ~Expression() = default;
 
     virtual jbcoe::polymorphic_value<lang::DataType> check_type() const = 0;
     virtual lang::Data evaluate() const = 0;

@@ -4,8 +4,6 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <memory>
-#include <cstring>
 #include "../include/third_party/polymorphic_value.h"
 #include "../include/driver.hpp"
 #include "../include/ast/ast.hpp"

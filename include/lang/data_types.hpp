@@ -17,20 +17,21 @@ enum class DataTypeId {
 };
 
 class DataType {
+   protected:
+    DataType(DataTypeId type_id);
+
    public:
     DataTypeId id;
     virtual std::size_t size() const = 0;
     virtual std::string str() const = 0;
 
+    virtual ~DataType() = default;
     virtual bool operator==(const DataType &rhs) const;
     bool operator!=(const DataType &rhs) const;
     bool operator<(const DataType &rhs) const;
     bool operator<=(const DataType &rhs) const;
     bool operator>(const DataType &rhs) const;
     bool operator>=(const DataType &rhs) const;
-
-   protected:
-    DataType(DataTypeId type_id);
 };
 
 class InvalidType : public DataType {
