@@ -35,7 +35,11 @@ Valja pogledati svaki od ovih foldera/fajlova da bi se razumela struktura projek
 - AST pre svega treba: Implementirati `codegen` metode za postojeće klase, i proširiti asortiman klasa.
 
 
+**ZA POČETAK:** Pogledati folder `USEFULL EXAMPLES`!!
+
+
 **NAPOMENA 1:** Prilikom generacije koda, generisani `llvm IR` kod se mora nalaziti u funkcijama jer će u suprotnom optimizator da eliminiše sve što je generisano za dati `modul` kada uradimio `module->print(llvm::outs(), nullptr)` ničeg neće imati!! Zato možda prvo treba proširiti parser i uvezati sa `ast`-om tako da podržava definicije/deklaracije funkcija.. Nije dobro raditi za svaki dobijeni Value*: Value->print.. Ova rečenica će verovatno postati logična u jednom trenutku. 
+
 
 **NAPOMENA 2:** Dakle za početak treba ići ka tome da može da se ispravno konstruiše IR za `example12.txt` program dat u primeru: `tests/example12.txt`.
 
