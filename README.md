@@ -35,7 +35,7 @@ Valja pogledati svaki od ovih foldera/fajlova da bi se razumela struktura projek
 - AST pre svega treba: Implementirati `codegen` metode za postojeće klase, i proširiti asortiman klasa.
 
 
-**ZA POČETAK:** Pogledati folder `USEFULL EXAMPLES`!!
+**ZA POČETAK:** Pogledati folder `USEFULL_EXAMPLES`!!
 
 
 **NAPOMENA 1:** Prilikom generacije koda, generisani `llvm IR` kod se mora nalaziti u funkcijama jer će u suprotnom optimizator da eliminiše sve što je generisano za dati `modul` kada uradimio `module->print(llvm::outs(), nullptr)` ničeg neće imati!! Zato možda prvo treba proširiti parser i uvezati sa `ast`-om tako da podržava definicije/deklaracije funkcija.. Nije dobro raditi za svaki dobijeni Value*: Value->print.. Ova rečenica će verovatno postati logična u jednom trenutku. 
@@ -54,6 +54,7 @@ Valja pogledati svaki od ovih foldera/fajlova da bi se razumela struktura projek
 
 # Korisni materijali
 
+- Folder `USEFULL_EXAMPLES`
 - Odštampani materijali koje sam ti dao. Tu ima isto kao sa vežbi primer `Kaleidoscope` na osnovu koga smo mi radili na vežbama.
 - Kaleidoscope tutorijal (isto rađeno na vežbama, imaš i odštampano): [link](https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/index.html)
 - Vežbe 2019, snimci su sa vežbi - bilo koja grupa: [link](http://poincare.matf.bg.ac.rs/~mirko/kk/2019/)
