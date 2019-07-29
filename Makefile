@@ -2,8 +2,9 @@
 GOAL = mylang.out
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -Wno-unused -g
+LDFLAGS=$(shell llvm-config --ldflags --libs)
 
-# Relevant directories
+
 INC_DIR = include
 SRC_DIR = src
 BLD_STS = build_stats
@@ -11,8 +12,8 @@ OBJ_DIR = $(SRC_DIR)/obj
 LIB_DIR = $(SRC_DIR)/libs
 
 # Build rules
-$(GOAL): $(OBJ_DIR)/lex.yy.o $(OBJ_DIR)/parser.tab.o $(OBJ_DIR)/driver.o $(OBJ_DIR)/ast.o $(OBJ_DIR)/data_types.o $(OBJ_DIR)/data.o $(OBJ_DIR)/operators.o $(OBJ_DIR)/semantic.o $(OBJ_DIR)/structs.o
-	$(CXX) $(CXXFLAGS) -o $@ $^
+$(GOAL): $(OBJ_DIR)/lex.yy.o $(OBJ_DIR)/parser.tab.o $(OBJ_DIR)/driver.o $(OBJ_DIR)/ast.o $(OBJ_DIR)/types.o $(OBJ_DIR)/operators.o $(OBJ_DIR)/semantic.o $(OBJ_DIR)/structs.o
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^
 
 $(OBJ_DIR)/parser.tab.o: $(SRC_DIR)/parser.tab.cpp $(INC_DIR)/parser.tab.hpp $(INC_DIR)/driver.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
@@ -26,10 +27,7 @@ $(OBJ_DIR)/driver.o: $(SRC_DIR)/driver.cpp $(INC_DIR)/driver.hpp $(INC_DIR)/colo
 $(OBJ_DIR)/ast.o: $(SRC_DIR)/ast/ast.cpp $(INC_DIR)/ast/ast.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-$(OBJ_DIR)/data_types.o: $(SRC_DIR)/lang/data_types.cpp $(INC_DIR)/lang/data_types.hpp
-	$(CXX) $(CXXFLAGS) -c -o $@ $<
-
-$(OBJ_DIR)/data.o: $(SRC_DIR)/lang/data.cpp $(INC_DIR)/lang/data.hpp
+$(OBJ_DIR)/types.o: $(SRC_DIR)/lang/types.cpp $(INC_DIR)/lang/types.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 $(OBJ_DIR)/operators.o: $(SRC_DIR)/lang/operators.cpp $(INC_DIR)/lang/operators.hpp

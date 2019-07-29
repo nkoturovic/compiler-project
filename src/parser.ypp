@@ -7,9 +7,10 @@
 #include "../include/third_party/polymorphic_value.h"
 #include "../include/driver.hpp"
 #include "../include/ast/ast.hpp"
-#include "../include/lang/data_types.hpp"
+#include "../include/lang/types.hpp"
 #include "../include/lang/operators.hpp"
 #include "../include/structs.hpp"
+#include "../include/codegen/codegen.hpp"
 
 /* Syntax error function */
 void yy::parser::error(const location_type& l, const string& msg) {
@@ -31,12 +32,12 @@ void yy::parser::error(const location_type& l, const string& msg) {
 %code requires {
     class Driver;
     using namespace std;
-    using namespace cpl;
+    using namespace compiler;
 
     template <typename T>
     using poly_val = jbcoe::polymorphic_value<T>;
-    using poly_expr = poly_val<cpl::ast::Expression>;
-    using poly_type = poly_val<cpl::lang::DataType>;
+    using poly_expr = poly_val<ast::Expression>;
+    using poly_type = poly_val<lang::types::Type>;
 }
 
 %param { Driver &driver }
@@ -134,7 +135,7 @@ Stmt : Sprt_stmt ";" { } /* Stmt that ends with separator  */
      ;
 
 Sprt_stmt : Expr { 
-            $1->interpret(); 
+            $1->codegen(); 
           }
           | print_token "(" List_of_expr ")" {}
           | Type { }
@@ -155,39 +156,38 @@ Pointer_type :  Type "*" { }
 
 
 Expr : "(" Expr ")" { $$ = move($2); }
-     | Expr "+" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::PLUS, move($1), move($3))); }
-     | Expr "-" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::MINUS, move($1), move($3))); }
-     | Expr "*" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::MUL, move($1), move($3))); }
-     | Expr "/" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::DIV, move($1), move($3))); }
-     | Expr "&&" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::L_AND, move($1), move($3))); }
-     | Expr "||" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::L_OR, move($1), move($3))); }
-     | Expr "&" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::B_AND, move($1), move($3))); }
-     | Expr "|" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::B_OR, move($1), move($3))); }
-     | Expr "^" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::B_XOR, move($1), move($3))); }
-     | Expr "<" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::LT, move($1), move($3))); }
-     | Expr ">" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::GT, move($1), move($3))); }
-     | Expr "<=" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::LEQ, move($1), move($3))); }
-     | Expr ">=" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::GEQ, move($1), move($3))); }
-     | Expr "<<" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::SHL, move($1), move($3))); }
-     | Expr ">>" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::SHR, move($1), move($3))); }
-     | Expr "==" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::EQ, move($1), move($3))); }
-     | Expr "!=" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::NEQ, move($1), move($3))); }
-     | Expr "%" Expr { $$ = poly_expr(ast::BinOp(@$, lang::BinOpId::MOD, move($1), move($3)));  }
+     | Expr "+" Expr { $$ = poly_expr(ast::BinOp(@$, lang::operators::BinOpId::PLUS, move($1), move($3))); }
+     | Expr "-" Expr { $$ = poly_expr(ast::BinOp(@$, lang::operators::BinOpId::MINUS, move($1), move($3))); }
+     | Expr "*" Expr { $$ = poly_expr(ast::BinOp(@$, lang::operators::BinOpId::MUL, move($1), move($3))); }
+     | Expr "/" Expr { $$ = poly_expr(ast::BinOp(@$, lang::operators::BinOpId::DIV, move($1), move($3))); }
+     | Expr "&&" Expr { $$ = poly_expr(ast::BinOp(@$, lang::operators::BinOpId::L_AND, move($1), move($3))); }
+     | Expr "||" Expr { $$ = poly_expr(ast::BinOp(@$, lang::operators::BinOpId::L_OR, move($1), move($3))); }
+     | Expr "&" Expr { $$ = poly_expr(ast::BinOp(@$, lang::operators::BinOpId::B_AND, move($1), move($3))); }
+     | Expr "|" Expr { $$ = poly_expr(ast::BinOp(@$, lang::operators::BinOpId::B_OR, move($1), move($3))); }
+     | Expr "^" Expr { $$ = poly_expr(ast::BinOp(@$, lang::operators::BinOpId::B_XOR, move($1), move($3))); }
+     | Expr "<" Expr { $$ = poly_expr(ast::BinOp(@$, lang::operators::BinOpId::LT, move($1), move($3))); }
+     | Expr ">" Expr { $$ = poly_expr(ast::BinOp(@$, lang::operators::BinOpId::GT, move($1), move($3))); }
+     | Expr "<=" Expr { $$ = poly_expr(ast::BinOp(@$, lang::operators::BinOpId::LEQ, move($1), move($3))); }
+     | Expr ">=" Expr { $$ = poly_expr(ast::BinOp(@$, lang::operators::BinOpId::GEQ, move($1), move($3))); }
+     | Expr "<<" Expr { $$ = poly_expr(ast::BinOp(@$, lang::operators::BinOpId::SHL, move($1), move($3))); }
+     | Expr ">>" Expr { $$ = poly_expr(ast::BinOp(@$, lang::operators::BinOpId::SHR, move($1), move($3))); }
+     | Expr "==" Expr { $$ = poly_expr(ast::BinOp(@$, lang::operators::BinOpId::EQ, move($1), move($3))); }
+     | Expr "!=" Expr { $$ = poly_expr(ast::BinOp(@$, lang::operators::BinOpId::NEQ, move($1), move($3))); }
+     | Expr "%" Expr { $$ = poly_expr(ast::BinOp(@$, lang::operators::BinOpId::MOD, move($1), move($3)));  }
      | id_token "[" Expr "]" { }
-     | "!" Expr { $$ = poly_expr(ast::UnOp(@$, lang::UnOpId::L_NOT, move($2))); }
-     | "~" Expr { $$ = poly_expr(ast::UnOp(@$, lang::UnOpId::B_NOT, move($2))); }
+     | "!" Expr { $$ = poly_expr(ast::UnOp(@$, lang::operators::UnOpId::L_NOT, move($2))); }
+     | "~" Expr { $$ = poly_expr(ast::UnOp(@$, lang::operators::UnOpId::B_NOT, move($2))); }
      | Func_call %prec CALL { }
-     | "-" Expr %prec UMINUS { $$ = poly_expr(ast::UnOp(@$, lang::UnOpId::MINUS, move($2))); }
-     | "+" Expr %prec UPLUS { $$ = poly_expr(ast::UnOp(@$, lang::UnOpId::PLUS, move($2))); }
-     | id_token { $$ = poly_expr(ast::Literal(@$, lang::Data(poly_type(lang::BasicType(lang::DataTypeId::INT)), 0)));  }
+     | "-" Expr %prec UMINUS { $$ = poly_expr(ast::UnOp(@$, lang::operators::UnOpId::MINUS, move($2))); }
+     | "+" Expr %prec UPLUS { $$ = poly_expr(ast::UnOp(@$, lang::operators::UnOpId::PLUS, move($2))); }
+     | id_token { poly_expr(ast::IntLiteral(@$, 0)); }
      | Literal { $$ = move($1); }
      ;
 
-Literal : char_token { $$ = poly_expr(ast::Literal(@$, lang::Data(poly_type(lang::BasicType(lang::DataTypeId::CHAR)), $1))); }
-        | int_token { $$ = poly_expr(ast::Literal(@$, lang::Data(poly_type(lang::BasicType(lang::DataTypeId::INT)), $1))); }
-        | double_token { $$ = poly_expr(ast::Literal(@$, lang::Data(poly_type(lang::BasicType(lang::DataTypeId::DOUBLE)), $1))); }
-        | string_token { $$ = poly_expr(ast::Literal(@$, lang::Data(poly_type(lang::PointerType(poly_type(lang::BasicType(lang::DataTypeId::CHAR)))), "REPLACE ME"))); 
-        }
+Literal : char_token { $$ = poly_expr(ast::CharLiteral(@$, $1)); }
+        | int_token { $$ = poly_expr(ast::IntLiteral(@$, $1)); }
+        | double_token { $$ = poly_expr(ast::DoubleLiteral(@$, $1)); }
+        | string_token { }
         ;
 
 
@@ -206,12 +206,13 @@ LVal : id_token { }
 
 %%
 
+
 int main(int argc, char * argv[])
 {
     bool read_from_file = false;
     Driver driver;
     Driver::set_active_instance(driver);
-
+    
     int i;
     for (i = 1; i < argc; i++) {
         if (argv[i] == string("-p")) {
@@ -227,6 +228,8 @@ int main(int argc, char * argv[])
         driver.parse(argv[i-1]);
     else
     driver.parse();
+
+    codegen::global::module->print(llvm::outs(), nullptr);
 
 	return 0;
 }

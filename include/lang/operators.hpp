@@ -4,7 +4,7 @@
 #include <map>
 #include <string>
 
-namespace cpl::lang {
+namespace compiler::lang::operators {
 
 enum class BinOpId {
     PLUS,
@@ -62,6 +62,6 @@ class UnOpInfo {
     static std::string unop_id_to_string(UnOpId op_id);
 };
 
-}  // namespace cpl::lang
+}  // namespace compiler::lang::operators
 
 #endif
