@@ -71,6 +71,11 @@ class BasicType : public Type {
     virtual std::string str() const override;
 };
 
+class VoidType : public BasicType {
+   public:
+    VoidType() : BasicType(TypeId::VOID) {}
+};
+
 class CharType : public BasicType {
    public:
     CharType() : BasicType(TypeId::CHAR) {}

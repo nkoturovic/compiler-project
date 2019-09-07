@@ -19,8 +19,14 @@ class AstNode {
    public:
     mutable std::optional<structs::Error> opt_error{std::nullopt};
     yy::location loc;
+    virtual llvm::Value* codegen() const = 0;
+    virtual std::string str() const = 0;
     virtual ~AstNode() = default;
+
+    friend std::ostream& operator<<(std::ostream &out, const AstNode& node);
 };
+std::ostream& operator<<(std::ostream &out, const AstNode& node);
+
 
 class Statement : public AstNode {
    public:
@@ -56,6 +62,7 @@ class CharLiteral : public Literal {
    public:
     CharLiteral(yy::location loc, char c);
     virtual llvm::Value* codegen() const override;
+    virtual std::string str() const override;
 };
 
 class IntLiteral : public Literal {
@@ -65,6 +72,7 @@ class IntLiteral : public Literal {
    public:
     IntLiteral(yy::location loc, int i);
     virtual llvm::Value* codegen() const override;
+    virtual std::string str() const override;
 };
 
 class DoubleLiteral : public Literal {
@@ -74,6 +82,7 @@ class DoubleLiteral : public Literal {
    public:
     DoubleLiteral(yy::location loc, double d);
     virtual llvm::Value* codegen() const override;
+    virtual std::string str() const override;
 };
 
 class BinOp : public Expression {
@@ -88,6 +97,7 @@ class BinOp : public Expression {
     virtual jbcoe::polymorphic_value<lang::types::Type> check_type()
         const override;
     virtual llvm::Value* codegen() const override;
+    virtual std::string str() const override;
 };
 
 class UnOp : public Expression {
@@ -101,6 +111,7 @@ class UnOp : public Expression {
     virtual jbcoe::polymorphic_value<lang::types::Type> check_type()
         const override;
     virtual llvm::Value* codegen() const override;
+    virtual std::string str() const override;
 };
 
 class Block : public Statement {
@@ -111,9 +122,19 @@ class Block : public Statement {
     Block(yy::location loc,
           std::vector<jbcoe::polymorphic_value<Statement>> statements);
     virtual llvm::Value* codegen() const override;
+    virtual std::string str() const override;
 };
 
-class FuncDecl : public Statement {
+
+class OuterDecl : public AstNode {
+   public:
+    OuterDecl(yy::location loc);
+    virtual llvm::Value* codegen() const = 0;
+    virtual std::string str() const = 0;
+};
+
+
+class FuncDecl : public OuterDecl {
    private:
     std::string m_name;
     std::vector<structs::FuncArg> m_args;
@@ -123,9 +144,10 @@ class FuncDecl : public Statement {
     FuncDecl(std::string name, std::vector<structs::FuncArg> args,
              jbcoe::polymorphic_value<lang::types::Type> retval_t);
     virtual llvm::Value* codegen() const override;
+    virtual std::string str() const override;
 };
 
-class FuncDef : public Statement {
+class FuncDef : public OuterDecl {
    private:
     FuncDecl m_prototype;
     Block m_body;
@@ -133,6 +155,7 @@ class FuncDef : public Statement {
    public:
     FuncDef(FuncDecl prototype, Block body);
     virtual llvm::Value* codegen() const override;
+    virtual std::string str() const override;
 };
 
 }  // namespace compiler::ast

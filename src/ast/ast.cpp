@@ -11,6 +11,9 @@ using namespace jbcoe;
 namespace compiler::ast {
 
 AstNode::AstNode(yy::location loc) : loc(std::move(loc)) {}
+std::ostream& operator<<(std::ostream &out, const AstNode& node) {
+    return out << node.str();
+}
 
 Statement::Statement(yy::location loc) : AstNode(std::move(loc)) {}
 
@@ -31,25 +34,41 @@ CharLiteral::CharLiteral(yy::location loc, char c)
     : Literal(std::move(loc), poly_type(types::CharType())), m_val(c) {}
 
 llvm::Value* CharLiteral::CharLiteral::codegen() const {
-    std::cout << "CharLiteral: " << this->m_val << std::endl;
-    return nullptr; /* TODO */
+    return nullptr; /* TODO */ 
+}
+
+std::string CharLiteral::CharLiteral::str() const {
+    std::stringstream ss; 
+    ss << "CharLiteral(" << this->m_val << ")";
+    return ss.str();
 }
 
 IntLiteral::IntLiteral(yy::location loc, int i)
     : Literal(std::move(loc), poly_type(types::IntType())), m_val(i) {}
 
 llvm::Value* IntLiteral::IntLiteral::codegen() const {
-    std::cout << "IntLiteral: " << this->m_val << std::endl;
     return nullptr; /* TODO */
+}
+
+std::string IntLiteral::IntLiteral::str() const {
+    std::stringstream ss; 
+    ss << "IntLiteral(" << this->m_val << ")";
+    return ss.str();
 }
 
 DoubleLiteral::DoubleLiteral(yy::location loc, double d)
     : Literal(std::move(loc), poly_type(types::IntType())), m_val(d) {}
 
 llvm::Value* DoubleLiteral::DoubleLiteral::codegen() const {
-    std::cout << "DoubleLiteral: " << this->m_val << std::endl;
     return nullptr; /* TODO */
 }
+
+std::string DoubleLiteral::DoubleLiteral::str() const {
+    std::stringstream ss; 
+    ss << "DoubleLiteral(" << this->m_val << ")";
+    return ss.str();
+}
+
 
 BinOp::BinOp(yy::location loc, operators::BinOpId op_id,
              polymorphic_value<Expression> lhs,
@@ -101,6 +120,15 @@ llvm::Value* BinOp::codegen() const {
                 // m_rhs->evaluate(), this->check_type());
 }
 
+std::string BinOp::str() const {
+    /* TODO */
+    std::stringstream ss;
+    ss << "BinOp" 
+       << lang::operators::BinOpInfo::binop_id_to_string(this->m_op_id)
+       << "(" << m_lhs->str() << "," << m_rhs->str() << ")";
+    return ss.str();
+}
+
 UnOp::UnOp(yy::location loc, operators::UnOpId op_id,
            polymorphic_value<Expression> expr)
     : Expression(std::move(loc)), m_op_id(op_id), m_expr(std::move(expr)) {}
@@ -138,6 +166,15 @@ llvm::Value* UnOp::codegen() const {
                 // this->check_type());
 }
 
+std::string UnOp::str() const {
+    std::stringstream ss;
+    ss << "UnOp" 
+       << lang::operators::UnOpInfo::unop_id_to_string(this->m_op_id)
+       << '(' << this->m_expr->str() << ')';
+    return ss.str();
+}
+
+
 Block::Block(yy::location loc,
              std::vector<jbcoe::polymorphic_value<Statement>> statements)
     : Statement(std::move(loc)), m_statements(std::move(statements)) {}
@@ -151,16 +188,29 @@ llvm::Value* Block::codegen() const {
     return nullptr;
 }
 
+std::string Block::str() const {
+    std::stringstream ss;
+    ss << "Block(";
+    for (auto& stmt : m_statements) 
+        ss << stmt->str();
+    ss << ')';
+
+    return ss.str();
+}
+
+OuterDecl::OuterDecl(yy::location loc) : AstNode(std::move(loc)) {} 
+
+
 FuncDecl::FuncDecl(std::string name, std::vector<structs::FuncArg> args,
                    jbcoe::polymorphic_value<lang::types::Type> retval_t)
-    : Statement(std::move(loc)),
+    : OuterDecl(std::move(loc)),
       m_name(std::move(name)),
       m_args(std::move(args)),
       m_retval_t(std::move(retval_t)) {}
 
 llvm::Value* FuncDecl::codegen() const {
     /* TODO */
-    std::cout << "Func declaration: ";
+    std::cout << "FuncDeclaration: ";
     std::cout << m_retval_t->str() << " " << m_name << std::endl;
     for (auto& [t, n] : m_args) std::cout << t->str() << " " << n << std::endl;
     std::cout << ")" << std::endl;
@@ -168,8 +218,21 @@ llvm::Value* FuncDecl::codegen() const {
     return nullptr;
 }
 
+std::string FuncDecl::str() const {
+    /* TODO */
+    std::stringstream ss;
+    ss << "FuncDeclaration("
+       << "FName("<< m_name << "),Args(";
+
+    for (auto& [t, n] : m_args) 
+        ss << t->str() << " " << n << ',';
+    ss << "),"
+       << "ReturnType(" << m_retval_t->str() << "))";
+    return ss.str();
+}
+
 FuncDef::FuncDef(FuncDecl prototype, Block body)
-    : Statement(std::move(loc)),
+    : OuterDecl(std::move(loc)),
       m_prototype(std::move(prototype)),
       m_body(std::move(body)) {}
 
@@ -181,5 +244,15 @@ llvm::Value* FuncDef::codegen() const {
 
     return nullptr;
 }
+
+std::string FuncDef::str() const {
+    std::stringstream ss;
+    ss << "FunctionDef("
+       << m_prototype.str() << ','
+       << m_body.str()
+       << ')';
+    return ss.str();
+}
+
 
 }  // namespace compiler::ast

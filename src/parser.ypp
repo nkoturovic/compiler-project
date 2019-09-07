@@ -91,8 +91,13 @@ pipe_token "|"
 %token <char> char_token "Char literal";
 %token <string> string_token "String literal";
 
-%type <poly_val<ast::Statement>> Stmt Sprt_stmt
+%type <poly_val<ast::OuterDecl>> Outer_decl Func_def
+%type <poly_val<ast::Statement>> Stmt Sprt_stmt Block
 %type <poly_val<ast::Expression>> Expr Literal
+%type <poly_type> Type Basic_type Pointer_type
+%type <vector<poly_val<ast::OuterDecl>>> Seq_of_outer_decl Program
+%type <vector<poly_val<ast::Statement>>> List_of_stmts 
+%type <vector<structs::FuncArg>> List_of_args
 
 %left "="
 %left "&&"
@@ -117,38 +122,65 @@ pipe_token "|"
 
 %%
 
-Program : Block {}
 
+/* Program is sequence of outer declarations ended by EOF  */
+Program : Seq_of_outer_decl eof_token { 
+            $$ = move($1); 
+            for (const poly_val<ast::OuterDecl> &pval_decl : $$) {
+                /* const ast::OuterDecl &decl = dynamic_cast<const ast::OuterDecl&>(*pdecl); */
+                std::cout << *pval_decl;
+            }
+        }
+        ;
 
-Block : "{" List_of_stmts "}"
-      | "{" /* Empty Block */ "}"
+Seq_of_outer_decl : Seq_of_outer_decl Outer_decl { $$ = move($1); $$.push_back($2); }
+        | Outer_decl { $$ = vector<poly_val<ast::OuterDecl>>(); $$.push_back(move($1)); }
+        ;
+
+Outer_decl : Func_def { $$ = move($1); }
+           ;
+
+Func_def : Type id_token "(" List_of_args ")" Block { 
+             // TODO: pazljivo, ali trebalo bi da je ovaj cast dobar
+             ast::Block &body = dynamic_cast<ast::Block&>(*$6);
+             $$ = poly_val<ast::OuterDecl>(ast::FuncDef(ast::FuncDecl(move($2), move($4), move($1)), move(body)));
+         } 
+         ;
+
+List_of_args : List_of_args "," Type id_token { $$ = move($1); $$.push_back({move($3), move($4)}); }
+             | Type id_token { $$ = std::vector<structs::FuncArg>(); $$.push_back({move($1), move($2)}); }
+             | /* eps */ { $$ = std::vector<structs::FuncArg>(); }
+             ;
+             
+
+Block : "{" List_of_stmts "}" { $$ = poly_val<ast::Statement>(ast::Block(@$, move($2))); }
+      | "{" /* Empty Block */ "}" { $$ = poly_val<ast::Statement>(ast::Block(@$, {} )); }
       ;
 
 
-List_of_stmts : List_of_stmts Stmt { }
-              | Stmt { }
+List_of_stmts : List_of_stmts Stmt { $$ = move($1); $$.push_back(move($2)); }
+              | Stmt { $$ = vector<poly_val<ast::Statement>>(); $$.push_back(move($1));}
               ;
 
-Stmt : Sprt_stmt ";" { } /* Stmt that ends with separator  */
-     | ";" { } /* Empty statement */ {}
-     | Block { }
+Stmt : Sprt_stmt ";" { $$ = move($1); } /* Stmt that ends with separator  */
+     | ";" { } /* TODO: Empty statement */ {}
+     | Block { $$ = move($1); }
      ;
 
 Sprt_stmt : Expr { 
-            $1->codegen(); 
+            $$ = poly_val<ast::Statement>(move($1));
           }
           | print_token "(" List_of_expr ")" {}
-          | Type { }
 	      ;
 
-Type : Basic_type { }
-     | Pointer_type { }
+Type : Basic_type { $$ = move($1); }
+     | Pointer_type {/* TODO */ }
      ;
 
-Basic_type : "void" { }
-           | "char" { }
-           | "int" { }
-           | "double" { }
+Basic_type : "void" { $$ = poly_type(lang::types::VoidType()); }
+           | "char" { $$ = poly_type(lang::types::CharType()); }
+           | "int" { $$ = poly_type(lang::types::IntType());  }
+           | "double" { $$ = poly_type(lang::types::DoubleType()); }
            ;
 
 Pointer_type :  Type "*" { }

@@ -17,6 +17,8 @@ struct global {
     static inline llvm::LLVMContext context = llvm::LLVMContext();
     static inline std::unique_ptr<llvm::Module> module =
         std::make_unique<llvm::Module>("top", context);
+
+    /* TODO: Disable no FOLDER */
     static inline llvm::IRBuilder<llvm::NoFolder> builder =
         llvm::IRBuilder<llvm::NoFolder>(context);
 };
