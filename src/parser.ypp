@@ -127,9 +127,13 @@ pipe_token "|"
 Program : Seq_of_outer_decl eof_token { 
             $$ = move($1); 
             for (const poly_val<ast::OuterDecl> &pval_decl : $$) {
-                /* const ast::OuterDecl &decl = dynamic_cast<const ast::OuterDecl&>(*pdecl); */
                 std::cout << *pval_decl;
             }
+
+            for (const poly_val<ast::OuterDecl> &pval_decl : $$) {
+                pval_decl->codegen();
+            }
+
         }
         ;
 
@@ -261,7 +265,16 @@ int main(int argc, char * argv[])
     else
     driver.parse();
 
-    codegen::global::module->print(llvm::outs(), nullptr);
+    std::vector<structs::Error> ast_errors = ast::AstNode::collect_errors();
+
+    if (!ast_errors.empty()) {
+        /* Print all errors collected from the Ast */
+        for (const structs::Error& err : ast_errors) {
+            driver.error(err.loc, err.msg);
+        }
+    } else {
+        codegen::global::module->print(llvm::outs(), nullptr);
+    }
 
 	return 0;
 }

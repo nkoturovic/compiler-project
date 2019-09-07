@@ -4,13 +4,40 @@
 #include "../../include/ast/ast.hpp"
 #include "../../include/driver.hpp"
 #include "../../include/lang/semantic.hpp"
+#include "../../include/codegen/codegen.hpp"
 
 using namespace compiler::lang;
 using namespace jbcoe;
 
 namespace compiler::ast {
 
-AstNode::AstNode(yy::location loc) : loc(std::move(loc)) {}
+AstNode::AstNode(yy::location loc) : loc(std::move(loc)) {
+    AstNode::m_node_instances.push_back(this);
+}
+
+std::vector<structs::Error> AstNode::collect_errors() {
+    std::vector <structs::Error> errors;
+    for (const AstNode * n : m_node_instances) {
+        if (n->opt_error.has_value())
+            errors.push_back(n->opt_error.value());
+    }
+    return errors;
+}
+
+bool AstNode::has_errors() {
+    for (const AstNode * n : m_node_instances) {
+        if (!n->opt_error.has_value()) 
+            return true;
+    }
+    return false;
+}
+
+AstNode::~AstNode() { 
+    auto it = std::find(m_node_instances.begin(), m_node_instances.end(), this);
+    if (it != m_node_instances.end())
+        AstNode::m_node_instances.erase(it);
+}
+
 std::ostream& operator<<(std::ostream &out, const AstNode& node) {
     return out << node.str();
 }
@@ -18,6 +45,16 @@ std::ostream& operator<<(std::ostream &out, const AstNode& node) {
 Statement::Statement(yy::location loc) : AstNode(std::move(loc)) {}
 
 Expression::Expression(yy::location loc) : Statement(std::move(loc)) {}
+
+llvm::Value* Expression::codegen() const {
+    structs::TypeValuePair tv = this->evaluate();
+
+    if (tv.type->id == lang::types::TypeId::INVALID || tv.value == nullptr) {
+
+    }
+
+    return tv.value;
+}
 
 polymorphic_value<types::Type> Literal::check_type() const {
     if (this->m_type->id == types::TypeId::INVALID)
@@ -33,8 +70,8 @@ Literal::Literal(yy::location loc,
 CharLiteral::CharLiteral(yy::location loc, char c)
     : Literal(std::move(loc), poly_type(types::CharType())), m_val(c) {}
 
-llvm::Value* CharLiteral::CharLiteral::codegen() const {
-    return nullptr; /* TODO */ 
+structs::TypeValuePair CharLiteral::evaluate() const {
+    return {}; /* TODO */ 
 }
 
 std::string CharLiteral::CharLiteral::str() const {
@@ -46,8 +83,8 @@ std::string CharLiteral::CharLiteral::str() const {
 IntLiteral::IntLiteral(yy::location loc, int i)
     : Literal(std::move(loc), poly_type(types::IntType())), m_val(i) {}
 
-llvm::Value* IntLiteral::IntLiteral::codegen() const {
-    return nullptr; /* TODO */
+structs::TypeValuePair IntLiteral::evaluate() const {
+    return {}; /* TODO */
 }
 
 std::string IntLiteral::IntLiteral::str() const {
@@ -59,8 +96,8 @@ std::string IntLiteral::IntLiteral::str() const {
 DoubleLiteral::DoubleLiteral(yy::location loc, double d)
     : Literal(std::move(loc), poly_type(types::IntType())), m_val(d) {}
 
-llvm::Value* DoubleLiteral::DoubleLiteral::codegen() const {
-    return nullptr; /* TODO */
+structs::TypeValuePair DoubleLiteral::evaluate() const {
+    return {}; /* TODO */
 }
 
 std::string DoubleLiteral::DoubleLiteral::str() const {
@@ -106,7 +143,8 @@ polymorphic_value<types::Type> BinOp::check_type() const {
     return res;
 }
 
-llvm::Value* BinOp::codegen() const {
+structs::TypeValuePair BinOp::evaluate() const {
+
     /* TODO */
      m_lhs->codegen();
 
@@ -156,7 +194,7 @@ polymorphic_value<types::Type> UnOp::check_type() const {
     return res;
 }
 
-llvm::Value* UnOp::codegen() const {
+structs::TypeValuePair UnOp::evaluate() const {
     /* TODO */
     std::cout << "UnOp: " +
                      lang::operators::UnOpInfo::unop_id_to_string(this->m_op_id)
@@ -208,14 +246,30 @@ FuncDecl::FuncDecl(std::string name, std::vector<structs::FuncArg> args,
       m_args(std::move(args)),
       m_retval_t(std::move(retval_t)) {}
 
-llvm::Value* FuncDecl::codegen() const {
-    /* TODO */
-    std::cout << "FuncDeclaration: ";
-    std::cout << m_retval_t->str() << " " << m_name << std::endl;
-    for (auto& [t, n] : m_args) std::cout << t->str() << " " << n << std::endl;
-    std::cout << ")" << std::endl;
+llvm::Function* FuncDecl::codegen() const {
+    // define retType @fname(args) { entrypoint: }
+    
+    std::vector<llvm::Type*> arg_types;
+    std::transform(m_args.begin(), m_args.end(), std::back_inserter(arg_types), 
+            [](const structs::FuncArg &arg){
+                return codegen::llvm_type(arg.type);
+            });
 
-    return nullptr;
+    llvm::FunctionType *funcType =
+        llvm::FunctionType::get(codegen::llvm_type(m_retval_t), arg_types, false);
+
+    llvm::Function *func =
+      llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, m_name, *codegen::global::module);
+
+  { 
+      unsigned i = 0;
+      for (auto it = func->arg_begin(); it != func->arg_end(); it++) {
+          if (!m_args[i].name.empty())
+            it->setName(m_args[i].name);
+        i++;
+      }
+  }
+    return func;
 }
 
 std::string FuncDecl::str() const {
@@ -236,13 +290,12 @@ FuncDef::FuncDef(FuncDecl prototype, Block body)
       m_prototype(std::move(prototype)),
       m_body(std::move(body)) {}
 
-llvm::Value* FuncDef::codegen() const {
-    /* TODO */
-    std::cout << "Function def: ";
-    m_prototype.codegen();
-    m_body.codegen();
+llvm::Function* FuncDef::codegen() const {
+    llvm::Function * func = m_prototype.codegen();
+    llvm::BasicBlock *entry = llvm::BasicBlock::Create(codegen::global::context, "entrypoint", func);
+    codegen::global::builder.SetInsertPoint(entry);
 
-    return nullptr;
+  return func;
 }
 
 std::string FuncDef::str() const {

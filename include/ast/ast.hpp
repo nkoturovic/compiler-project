@@ -13,15 +13,20 @@
 namespace compiler::ast {
 // AST
 class AstNode {
+   private:
+   inline static std::vector<AstNode *> m_node_instances = std::vector<AstNode *>();
    protected:
     AstNode(yy::location loc);
 
    public:
+    static std::vector<structs::Error> collect_errors();
+    static bool has_errors();
+
     mutable std::optional<structs::Error> opt_error{std::nullopt};
     yy::location loc;
     virtual llvm::Value* codegen() const = 0;
     virtual std::string str() const = 0;
-    virtual ~AstNode() = default;
+    virtual ~AstNode();
 
     friend std::ostream& operator<<(std::ostream &out, const AstNode& node);
 };
@@ -39,7 +44,8 @@ class Expression : public Statement {
     Expression(yy::location loc);
 
     virtual jbcoe::polymorphic_value<lang::types::Type> check_type() const = 0;
-    virtual llvm::Value* codegen() const override = 0;
+    virtual llvm::Value* codegen() const override;
+    virtual structs::TypeValuePair evaluate() const = 0;
 };
 
 class Literal : public Expression {
@@ -49,7 +55,6 @@ class Literal : public Expression {
    public:
     virtual jbcoe::polymorphic_value<lang::types::Type> check_type()
         const override;
-    virtual llvm::Value* codegen() const override = 0;
 
    protected:
     Literal(yy::location loc, jbcoe::polymorphic_value<lang::types::Type>);
@@ -61,7 +66,7 @@ class CharLiteral : public Literal {
 
    public:
     CharLiteral(yy::location loc, char c);
-    virtual llvm::Value* codegen() const override;
+    virtual structs::TypeValuePair evaluate() const override;
     virtual std::string str() const override;
 };
 
@@ -71,7 +76,7 @@ class IntLiteral : public Literal {
 
    public:
     IntLiteral(yy::location loc, int i);
-    virtual llvm::Value* codegen() const override;
+    virtual structs::TypeValuePair evaluate() const override;
     virtual std::string str() const override;
 };
 
@@ -81,7 +86,7 @@ class DoubleLiteral : public Literal {
 
    public:
     DoubleLiteral(yy::location loc, double d);
-    virtual llvm::Value* codegen() const override;
+    virtual structs::TypeValuePair evaluate() const override;
     virtual std::string str() const override;
 };
 
@@ -96,7 +101,7 @@ class BinOp : public Expression {
           jbcoe::polymorphic_value<Expression> rhs);
     virtual jbcoe::polymorphic_value<lang::types::Type> check_type()
         const override;
-    virtual llvm::Value* codegen() const override;
+    virtual structs::TypeValuePair evaluate() const override;
     virtual std::string str() const override;
 };
 
@@ -110,7 +115,7 @@ class UnOp : public Expression {
          jbcoe::polymorphic_value<Expression> expr);
     virtual jbcoe::polymorphic_value<lang::types::Type> check_type()
         const override;
-    virtual llvm::Value* codegen() const override;
+    virtual structs::TypeValuePair evaluate() const override;
     virtual std::string str() const override;
 };
 
@@ -135,16 +140,18 @@ class OuterDecl : public AstNode {
 
 
 class FuncDecl : public OuterDecl {
-   private:
-    std::string m_name;
-    std::vector<structs::FuncArg> m_args;
-    jbcoe::polymorphic_value<lang::types::Type> m_retval_t;
+  public:
+   std::string m_name;
+   std::vector<structs::FuncArg> m_args;
+   jbcoe::polymorphic_value<lang::types::Type> m_retval_t;
 
-   public:
+
     FuncDecl(std::string name, std::vector<structs::FuncArg> args,
              jbcoe::polymorphic_value<lang::types::Type> retval_t);
-    virtual llvm::Value* codegen() const override;
+    virtual llvm::Function* codegen() const override;
     virtual std::string str() const override;
+
+    friend class FuncDef;
 };
 
 class FuncDef : public OuterDecl {
@@ -154,7 +161,7 @@ class FuncDef : public OuterDecl {
 
    public:
     FuncDef(FuncDecl prototype, Block body);
-    virtual llvm::Value* codegen() const override;
+    virtual llvm::Function* codegen() const override;
     virtual std::string str() const override;
 };
 
