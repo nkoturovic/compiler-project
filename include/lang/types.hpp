@@ -105,6 +105,14 @@ class PointerType : public Type {
 
     bool operator==(const PointerType &rhs) const;
 };
+
+class StringType : public PointerType {
+   public:
+    StringType() : PointerType(jbcoe::polymorphic_value<Type>(CharType())) {}
+};
+
+
+
 }  // namespace compiler::lang::types
 
 #endif

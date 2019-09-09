@@ -1,7 +1,0 @@
-{
-	print("Tabs and spaces example"); 
-	{ 	
-		error    here
-	}
-}
-

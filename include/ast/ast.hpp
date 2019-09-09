@@ -9,24 +9,26 @@
 #include "../structs.hpp"
 #include "../third_party/polymorphic_value.h"
 #include "../../include/codegen/codegen.hpp"
+#include "../../include/codegen/symbol.hpp"
 
 namespace compiler::ast {
 // AST
 class AstNode {
-   private:
-   inline static std::vector<AstNode *> m_node_instances = std::vector<AstNode *>();
    protected:
     AstNode(yy::location loc);
+    inline static codegen::SymbolTable symbols = codegen::SymbolTable();
+    inline static std::vector<structs::Error> errors{};
+    inline static std::vector<structs::Error> warnings{};
 
    public:
-    static std::vector<structs::Error> collect_errors();
-    static bool has_errors();
 
-    mutable std::optional<structs::Error> opt_error{std::nullopt};
     yy::location loc;
     virtual llvm::Value* codegen() const = 0;
     virtual std::string str() const = 0;
     virtual ~AstNode();
+
+    static std::vector<structs::Error> get_errors();
+    static std::vector<structs::Error> get_warnings();
 
     friend std::ostream& operator<<(std::ostream &out, const AstNode& node);
 };
@@ -86,6 +88,28 @@ class DoubleLiteral : public Literal {
 
    public:
     DoubleLiteral(yy::location loc, double d);
+    virtual structs::TypeValuePair evaluate() const override;
+    virtual std::string str() const override;
+};
+
+class StringLiteral : public Literal {
+   private:
+       std::string m_val;
+
+   public:
+    StringLiteral(yy::location loc, std::string str);
+    virtual structs::TypeValuePair evaluate() const override;
+    virtual std::string str() const override;
+};
+
+
+class Variable : public Expression {
+    private:
+        std::string m_id;
+    public:
+    Variable(yy::location loc, std::string id);
+
+    virtual jbcoe::polymorphic_value<lang::types::Type> check_type() const override;
     virtual structs::TypeValuePair evaluate() const override;
     virtual std::string str() const override;
 };
@@ -174,6 +198,19 @@ class FuncDef : public OuterDecl {
     FuncDef(yy::location loc, FuncDecl prototype, Block body);
     virtual llvm::Function* codegen() const override;
     virtual std::string str() const override;
+};
+
+class FuncCall : public Expression {
+    private:
+        std::string m_fname;
+        std::vector<jbcoe::polymorphic_value<Expression>> m_args;
+
+    public:
+        FuncCall(yy::location loc, std::string fname, std::vector<jbcoe::polymorphic_value<Expression>> arguments);
+
+        virtual jbcoe::polymorphic_value<lang::types::Type> check_type() const override;
+        virtual structs::TypeValuePair evaluate() const override;
+        virtual std::string str() const override;
 };
 
 }  // namespace compiler::ast

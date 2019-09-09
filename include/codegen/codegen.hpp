@@ -9,6 +9,7 @@
 #include "llvm/IR/NoFolder.h"
 
 #include <llvm/IR/Type.h>
+#include <llvm/IR/DerivedTypes.h>
 #include "llvm/IR/Function.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/BasicBlock.h"

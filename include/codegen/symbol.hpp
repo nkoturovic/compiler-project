@@ -25,10 +25,11 @@ public:
 
 class SymbolTable {
     private:
-    std::unordered_map<std::string, structs::TypeValuePair> m_functions;
     std::unordered_map<std::string, structs::TypeValuePair> m_global_scope;
     std::vector<std::unordered_map<std::string, structs::TypeValuePair>> m_scopes;
-
+    std::unordered_map<std::string, structs::LocProtoFuncTriple> m_declared_functions;
+    std::unordered_map<std::string, structs::LocProtoFuncTriple> m_defined_functions;
+    
     // scope tracking
     unsigned int m_relevant_index = 0;
     std::vector<unsigned int> m_pushed_scopes_indexes {};
@@ -36,11 +37,12 @@ class SymbolTable {
     public:
 
     std::optional<structs::TypeValuePair> get_variable(std::string id);
-    std::optional<structs::FuncProto> get_function(std::string id);
+    std::optional<structs::LocProtoFuncTriple> get_function(std::string id);
 
     void define_variable(std::string id, structs::TypeValuePair tv);
-    void function(std::string id, structs::FuncProto proto);
     void update_variable(std::string id, structs::TypeValuePair tv);
+    std::optional<structs::Error> declare_function(std::string id, structs::LocProtoFuncTriple lpf);
+    std::optional<structs::Error> define_function(std::string id, structs::LocProtoFuncTriple tv);
 
     void begin_scope();
     void end_scope();

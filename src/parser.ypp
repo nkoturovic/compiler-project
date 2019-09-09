@@ -94,10 +94,11 @@ pipe_token "|"
 
 %type <poly_val<ast::OuterDecl>> Outer_decl Func_def
 %type <poly_val<ast::Statement>> Stmt Sprt_stmt Block
-%type <poly_val<ast::Expression>> Expr Literal
+%type <poly_val<ast::Expression>> Expr Literal Func_call
 %type <poly_type> Type Basic_type Pointer_type
 %type <vector<poly_val<ast::OuterDecl>>> Seq_of_outer_decl Program
 %type <vector<poly_val<ast::Statement>>> List_of_stmts 
+%type <vector<poly_val<ast::Expression>>> List_of_expr Parameters
 %type <vector<structs::FuncArg>> List_of_args
 
 %left "="
@@ -128,9 +129,9 @@ pipe_token "|"
 Program : Seq_of_outer_decl eof_token { 
             $$ = move($1); 
             // AST to_string -> cout
-            // for (const poly_val<ast::OuterDecl> &pval_decl : $$) {
-            //    std::cout << *pval_decl;
-            // }
+            for (const poly_val<ast::OuterDecl> &pval_decl : $$) {
+               std::cout << *pval_decl;
+            }
 
             for (const poly_val<ast::OuterDecl> &pval_decl : $$) {
                 pval_decl->codegen();
@@ -181,7 +182,7 @@ Sprt_stmt : Expr {
 	      ;
 
 Type : Basic_type { $$ = move($1); }
-     | Pointer_type {/* TODO */ }
+     | Pointer_type { $$ = move($1); }
      ;
 
 Basic_type : "void" { $$ = poly_type(lang::types::VoidType()); }
@@ -190,7 +191,7 @@ Basic_type : "void" { $$ = poly_type(lang::types::VoidType()); }
            | "double" { $$ = poly_type(lang::types::DoubleType()); }
            ;
 
-Pointer_type :  Type "*" { }
+Pointer_type :  Type "*" { $$ = poly_type(lang::types::PointerType($1)); }
              ;
 
 
@@ -216,27 +217,27 @@ Expr : "(" Expr ")" { $$ = move($2); }
      | id_token "[" Expr "]" { }
      | "!" Expr { $$ = poly_expr(ast::UnOp(@$, lang::operators::UnOpId::L_NOT, move($2))); }
      | "~" Expr { $$ = poly_expr(ast::UnOp(@$, lang::operators::UnOpId::B_NOT, move($2))); }
-     | Func_call %prec CALL { }
+     | Func_call %prec CALL { $$ = move($1); }
      | "-" Expr %prec UMINUS { $$ = poly_expr(ast::UnOp(@$, lang::operators::UnOpId::MINUS, move($2))); }
      | "+" Expr %prec UPLUS { $$ = poly_expr(ast::UnOp(@$, lang::operators::UnOpId::PLUS, move($2))); }
-     | id_token { poly_expr(ast::IntLiteral(@$, 0)); }
+     | id_token { $$ = poly_expr(ast::Variable(@$, move($1))); }
      | Literal { $$ = move($1); }
      ;
 
 Literal : char_token { $$ = poly_expr(ast::CharLiteral(@$, $1)); }
         | int_token { $$ = poly_expr(ast::IntLiteral(@$, $1)); }
         | double_token { $$ = poly_expr(ast::DoubleLiteral(@$, $1)); }
-        | string_token { }
+        | string_token { $$ = poly_expr(ast::StringLiteral(@$, $1)); }
         ;
 
 
-Func_call : id_token "(" Parameters ")" { }
+Func_call : id_token "(" Parameters ")" { $$ = poly_expr(ast::FuncCall(@$, move($1), move($3))); }
 
-Parameters : List_of_expr { }
-           ;
+Parameters : List_of_expr { $$ = move($1); };
+           | /* eps */ { $$ = {}; }
 
-List_of_expr : List_of_expr "," Expr {}
-             | Expr {}
+List_of_expr : List_of_expr "," Expr { $$ = $1; $$.push_back(move($3)); }
+             | Expr { $$ = {}; $$.push_back(move($1)); }
              ;
 
 LVal : id_token { }
@@ -268,14 +269,24 @@ int main(int argc, char * argv[])
     else
     driver.parse();
 
-    std::vector<structs::Error> ast_errors = ast::AstNode::collect_errors();
+    std::vector<structs::Error> ast_errors = ast::AstNode::get_errors();
+    std::vector<structs::Error> ast_warnings = ast::AstNode::get_warnings();
 
     if (!ast_errors.empty()) {
         /* Print all errors collected from the Ast */
         for (const structs::Error& err : ast_errors) {
             driver.error(err.loc, err.msg);
         }
-    } else {
+    }
+
+    if (!ast_warnings.empty()) {
+        /* Print all warnigns collected from the Ast */
+        for (const structs::Error& err : ast_warnings) {
+            driver.warning(err.loc, err.msg);
+        }
+    }
+
+    if (ast_errors.empty()) {
         codegen::global::module->print(llvm::outs(), nullptr);
     }
 

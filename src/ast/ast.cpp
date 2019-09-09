@@ -11,32 +11,18 @@ using namespace jbcoe;
 
 namespace compiler::ast {
 
-AstNode::AstNode(yy::location loc) : loc(std::move(loc)) {
-    AstNode::m_node_instances.push_back(this);
+AstNode::AstNode(yy::location loc) : loc(std::move(loc)) { }
+
+AstNode::~AstNode() { }
+
+std::vector<structs::Error> AstNode::get_errors() {
+    return AstNode::errors;
 }
 
-std::vector<structs::Error> AstNode::collect_errors() {
-    std::vector <structs::Error> errors;
-    for (const AstNode * n : m_node_instances) {
-        if (n->opt_error.has_value())
-            errors.push_back(n->opt_error.value());
-    }
-    return errors;
+std::vector<structs::Error> AstNode::get_warnings() {
+    return AstNode::warnings;
 }
 
-bool AstNode::has_errors() {
-    for (const AstNode * n : m_node_instances) {
-        if (!n->opt_error.has_value()) 
-            return true;
-    }
-    return false;
-}
-
-AstNode::~AstNode() { 
-    auto it = std::find(m_node_instances.begin(), m_node_instances.end(), this);
-    if (it != m_node_instances.end())
-        AstNode::m_node_instances.erase(it);
-}
 
 std::ostream& operator<<(std::ostream &out, const AstNode& node) {
     return out << node.str();
@@ -58,7 +44,7 @@ llvm::Value* Expression::codegen() const {
 
 polymorphic_value<types::Type> Literal::check_type() const {
     if (this->m_type->id == types::TypeId::INVALID)
-        this->opt_error.emplace(
+        AstNode::errors.push_back(
             structs::Error{this->loc, std::string("Invalid type of literal")});
     return this->m_type;
 }
@@ -112,6 +98,52 @@ std::string DoubleLiteral::DoubleLiteral::str() const {
     return ss.str();
 }
 
+StringLiteral::StringLiteral(yy::location loc, std::string str)
+    : Literal(std::move(loc), poly_type(types::StringType())), m_val(std::move(str)) {}
+
+structs::TypeValuePair StringLiteral::evaluate() const {
+    polymorphic_value<lang::types::Type> type = polymorphic_value<lang::types::Type>(lang::types::StringType());
+    llvm::Constant * val = llvm::ConstantDataArray::getString(codegen::global::module->getContext(), m_val, true);
+    return {type, val};
+}
+
+std::string StringLiteral::StringLiteral::str() const {
+    std::stringstream ss; 
+    ss << "StringLiteral(" << this->m_val << ")";
+    return ss.str();
+}
+
+
+Variable::Variable(yy::location loc, std::string id) : Expression(std::move(loc)), m_id(std::move(id)) { }
+
+jbcoe::polymorphic_value<lang::types::Type> Variable::check_type() const {
+    std::optional<structs::TypeValuePair> opt_var = symbols.get_variable(m_id);
+    lang::types::InvalidType invalid_t;
+    if (!opt_var.has_value()) {
+        return poly_type(invalid_t);
+    } else if (opt_var->type->id == invalid_t.id || opt_var->value == nullptr) {
+        return poly_type(invalid_t);
+    }
+    return opt_var->type;
+}
+
+structs::TypeValuePair Variable::evaluate() const { 
+    auto type = this->check_type();
+    if (type->id == lang::types::TypeId::INVALID) {
+        AstNode::errors.push_back(structs::Error{this->loc, "Undefined variable " + m_id});
+        return {type, nullptr}; 
+    }
+
+    std::optional<structs::TypeValuePair> opt_var = symbols.get_variable(m_id);
+    return opt_var.value();
+}
+
+
+std::string Variable::str() const {
+    return "Variable(" + m_id + ")";
+}
+
+
 
 BinOp::BinOp(yy::location loc, operators::BinOpId op_id,
              polymorphic_value<Expression> lhs,
@@ -125,26 +157,14 @@ polymorphic_value<types::Type> BinOp::check_type() const {
     const polymorphic_value<types::Type>&lhs_type = m_lhs->check_type(),
           &rhs_type = m_rhs->check_type();
 
-    if (lhs_type->id == types::TypeId::INVALID) {
-        if (m_lhs->opt_error.has_value())
-            this->opt_error.emplace(m_lhs->opt_error.value());
-        return polymorphic_value<types::Type>(types::InvalidType());
-    } else if (rhs_type->id == types::TypeId::INVALID) {
-        if (m_rhs->opt_error.has_value())
-            this->opt_error.emplace(m_rhs->opt_error.value());
+    if (lhs_type->id == types::TypeId::INVALID || 
+            rhs_type->id == types::TypeId::INVALID) {
+        //AstNode::errors.push_back(structs::Error{this->loc, "Unable to evaluate expression " + this->str()});
         return polymorphic_value<types::Type>(types::InvalidType());
     }
 
     polymorphic_value<types::Type> res =
         semantic::binop_check(m_op_id, lhs_type, rhs_type);
-
-    if (res->id == types::TypeId::INVALID) {
-        std::stringstream err_msg_ss;
-        err_msg_ss << "Invalid operands to BinOp "
-                   << operators::BinOpInfo::binop_id_to_string(m_op_id) << " ("
-                   << lhs_type->str() << ", " << rhs_type->str() << ")";
-        this->opt_error.emplace(structs::Error{loc, err_msg_ss.str()});
-    }
 
     return res;
 }
@@ -154,20 +174,26 @@ structs::TypeValuePair BinOp::evaluate() const {
      structs::TypeValuePair lhs_tv = m_lhs->evaluate();
      structs::TypeValuePair rhs_tv = m_rhs->evaluate();
 
-    auto invalid_type = lang::types::InvalidType();
+     auto invalid_type = lang::types::InvalidType();
 
      if (lhs_tv.type->id == invalid_type.id || 
          rhs_tv.type->id == invalid_type.id ||
          lhs_tv.value == nullptr ||
          rhs_tv.value == nullptr) {
-         this->opt_error.emplace(structs::Error{this->loc, "Unable to evaluate expression"});
+         //AstNode::errors.push_back(structs::Error{this->loc, "Unable to evaluate expression"});
          return {polymorphic_value<lang::types::Type>(invalid_type), nullptr};
      }
 
      polymorphic_value<lang::types::Type> result_type = this->check_type();
 
-     if (result_type->id == invalid_type.id)
-         return {polymorphic_value<lang::types::Type>(invalid_type), nullptr};
+    if (result_type->id == invalid_type.id) {
+        std::stringstream err_msg_ss;
+        err_msg_ss << "Invalid operands to BinOp"
+                   << operators::BinOpInfo::binop_id_to_string(m_op_id) << "("
+                   << lhs_tv.type->str() << "," << rhs_tv.type->str() << ")";
+        AstNode::errors.push_back(structs::Error{this->loc, err_msg_ss.str()});
+        return {polymorphic_value<lang::types::Type>(invalid_type), nullptr};
+    }
 
      // TODO EXPAND
      llvm::Value * lhs_value = lhs_tv.value;
@@ -175,22 +201,22 @@ structs::TypeValuePair BinOp::evaluate() const {
      llvm::Value * result_value = nullptr;
      if (result_type->id == lang::types::TypeId::INT) {
         if (lhs_tv.type->id == lang::types::TypeId::DOUBLE) 
-             lhs_value = codegen::global::builder.CreateFPToSI(lhs_tv.value, codegen::llvm_type(result_type), "fptositmp");
+             lhs_value = codegen::global::builder.CreateFPToSI(lhs_tv.value, codegen::llvm_type(result_type), "fptosi");
         if (rhs_tv.type->id == lang::types::TypeId::DOUBLE) 
-             rhs_value = codegen::global::builder.CreateFPToSI(rhs_tv.value, codegen::llvm_type(result_type), "fptositmp");
+             rhs_value = codegen::global::builder.CreateFPToSI(rhs_tv.value, codegen::llvm_type(result_type), "fptosi");
 
          switch(m_op_id) {
              case lang::operators::BinOpId::PLUS :
-                 result_value = codegen::global::builder.CreateAdd(lhs_value, rhs_value, "iaddtmp");
+                 result_value = codegen::global::builder.CreateAdd(lhs_value, rhs_value, "iadd");
                  break;
              case lang::operators::BinOpId::MINUS :
-                 result_value = codegen::global::builder.CreateSub(lhs_value, rhs_value, "isubtmp");
+                 result_value = codegen::global::builder.CreateSub(lhs_value, rhs_value, "isub");
                  break;
             case lang::operators::BinOpId::MUL :
-                 result_value = codegen::global::builder.CreateMul(lhs_value, rhs_value, "imultmp");
+                 result_value = codegen::global::builder.CreateMul(lhs_value, rhs_value, "imul");
                  break;
             case lang::operators::BinOpId::DIV :
-                 result_value = codegen::global::builder.CreateUDiv(lhs_value, rhs_value, "idivtmp");
+                 result_value = codegen::global::builder.CreateUDiv(lhs_value, rhs_value, "idiv");
                  break;
             default:
                  result_value = nullptr;
@@ -198,22 +224,22 @@ structs::TypeValuePair BinOp::evaluate() const {
      } else if (result_type->id == lang::types::TypeId::DOUBLE) {
 
          if (lhs_tv.type->id == lang::types::TypeId::INT) 
-              lhs_value = codegen::global::builder.CreateSIToFP(lhs_tv.value, codegen::llvm_type(result_type), "sitofptmp");
+              lhs_value = codegen::global::builder.CreateSIToFP(lhs_tv.value, codegen::llvm_type(result_type), "sitofp");
          if (rhs_tv.type->id == lang::types::TypeId::INT) 
-              rhs_value = codegen::global::builder.CreateSIToFP(rhs_tv.value, codegen::llvm_type(result_type), "sitofptmp");
+              rhs_value = codegen::global::builder.CreateSIToFP(rhs_tv.value, codegen::llvm_type(result_type), "sitofp");
 
          switch(m_op_id) {
              case lang::operators::BinOpId::PLUS :
-                 result_value = codegen::global::builder.CreateFAdd(lhs_value, rhs_value, "faddtmp");
+                 result_value = codegen::global::builder.CreateFAdd(lhs_value, rhs_value, "fadd");
                  break;
              case lang::operators::BinOpId::MINUS :
                  result_value = codegen::global::builder.CreateFSub(lhs_value, rhs_value, "fsubmp");
                  break;
             case lang::operators::BinOpId::MUL :
-                 result_value = codegen::global::builder.CreateFMul(lhs_value, rhs_value, "fmultmp");
+                 result_value = codegen::global::builder.CreateFMul(lhs_value, rhs_value, "fmul");
                  break;
             case lang::operators::BinOpId::DIV :
-                 result_value = codegen::global::builder.CreateFDiv(lhs_value, rhs_value, "fdivtmp");
+                 result_value = codegen::global::builder.CreateFDiv(lhs_value, rhs_value, "fdiv");
                  break;
            default:
                  result_value = nullptr;
@@ -239,8 +265,7 @@ polymorphic_value<types::Type> UnOp::check_type() const {
     const polymorphic_value<types::Type>& expr_type = m_expr->check_type();
 
     if (expr_type->id == types::TypeId::INVALID) {
-        if (m_expr->opt_error.has_value())
-            this->opt_error.emplace(m_expr->opt_error.value());
+        AstNode::errors.push_back(structs::Error{this->loc, "Unable to apply UnOp" + operators::UnOpInfo::unop_id_to_string(m_op_id) });
         return polymorphic_value<types::Type>(types::InvalidType());
     }
 
@@ -252,7 +277,7 @@ polymorphic_value<types::Type> UnOp::check_type() const {
         err_msg_ss << "Invalid operands to UnOp "
                    << operators::UnOpInfo::unop_id_to_string(m_op_id) << " ("
                    << expr_type->str() << ")";
-        this->opt_error.emplace(structs::Error{loc, err_msg_ss.str()});
+        AstNode::errors.push_back(structs::Error{loc, err_msg_ss.str()});
     }
 
     return res;
@@ -281,16 +306,19 @@ Block::Block(yy::location loc,
              std::vector<jbcoe::polymorphic_value<Statement>> statements)
     : Statement(std::move(loc)), m_statements(std::move(statements)) {}
 
+
 llvm::Value* Block::codegen() const {
+    AstNode::symbols.begin_scope();
     for (auto& s : m_statements) 
         s->codegen();
+    AstNode::symbols.end_scope();
     return nullptr;
 }
 
 std::string Block::str() const {
     std::stringstream ss;
     ss << "Block(";
-    for (auto& stmt : m_statements) 
+    for (const auto& stmt : m_statements) 
         ss << stmt->str();
     ss << ')';
 
@@ -327,6 +355,7 @@ llvm::Function* FuncDecl::codegen() const {
         i++;
       }
   }
+    symbols.declare_function(m_prototype.name, {this->loc, m_prototype, func});
     return func;
 }
 
@@ -353,7 +382,7 @@ llvm::Function* FuncDef::codegen() const {
     llvm::Function * func = m_prototype.codegen();
     llvm::BasicBlock *entry = llvm::BasicBlock::Create(codegen::global::context, "entrypoint", func);
     codegen::global::builder.SetInsertPoint(entry);
-
+    symbols.define_function(m_prototype.m_prototype.name, {this->loc, m_prototype.m_prototype, func});
     m_body.codegen();
 
   return func;
@@ -381,17 +410,19 @@ ReturnStmt::ReturnStmt(yy::location loc, jbcoe::polymorphic_value<Expression> ex
 llvm::Value* ReturnStmt::codegen() const {
     polymorphic_value<lang::types::Type> return_type = FuncDef::current_codegen_proto().retval_t;
     structs::TypeValuePair type_value_pair = m_expr->evaluate();
-    llvm::Value * retval = type_value_pair.value;
-    if (*return_type != *type_value_pair.type) {
-        if (return_type->id == lang::types::TypeId::DOUBLE && type_value_pair.type->id <= lang::types::TypeId::INT) {
-            retval = codegen::global::builder.CreateSIToFP(retval, codegen::llvm_type(return_type), "retvalsitofp");
-        } else if (return_type->id <= lang::types::TypeId::INT && type_value_pair.type->id == lang::types::TypeId::DOUBLE) {
-            retval = codegen::global::builder.CreateFPToSI(retval, codegen::llvm_type(return_type), "retvalfptosi");
-        } else {
-            retval = nullptr;
-        }
+
+    if (type_value_pair.type->id == lang::types::TypeId::INVALID ||
+        type_value_pair.value == nullptr) 
+        return nullptr;
+
+    structs::TypeCodegenFuncPair converted = semantic::convert(std::move(type_value_pair), return_type);
+
+    if (converted.type->id == lang::types::TypeId::INVALID) {
+        AstNode::errors.push_back(
+                structs::Error{this->loc, "returning " + type_value_pair.type->str() + ", but return type is " + return_type->str()});
+        return nullptr;
     }
-    return codegen::global::builder.CreateRet(retval);
+    return codegen::global::builder.CreateRet(converted.codegen_func());
 }
 
 std::string ReturnStmt::str() const {
@@ -401,5 +432,76 @@ std::string ReturnStmt::str() const {
     return ss.str();
 }
 
+FuncCall::FuncCall(yy::location loc, std::string fname, std::vector<polymorphic_value<Expression>> arguments) 
+                        : Expression(std::move(loc)), m_fname(std::move(fname)) { m_args = std::move(arguments); }
+
+polymorphic_value<lang::types::Type> FuncCall::check_type() const {
+    std::optional<structs::LocProtoFuncTriple> lpf = AstNode::symbols.get_function(m_fname);
+    lang::types::InvalidType invalid_type;
+    if (!lpf.has_value()) {
+        AstNode::errors.push_back({this->loc, "Function " + m_fname + " is not defined"});
+        return poly_type(invalid_type);
+    }
+
+    if (lpf->proto.args.size() != m_args.size()) {
+        std::stringstream ss;
+        ss << "Function " << m_fname << "expects "
+           << lpf->proto.args.size() << " args but you've called it with " << m_args.size(); 
+        AstNode::errors.push_back({this->loc, ss.str()});
+        return poly_type(invalid_type);
+    }
+
+    for (unsigned i=0; i < m_args.size(); i++) {
+        auto exp_t = m_args[i]->check_type();
+
+        if (exp_t->id == lang::types::TypeId::INVALID)
+            return poly_type(invalid_type);
+
+        structs::TypeCodegenFuncPair type_cdg = semantic::convert({exp_t, nullptr}, lpf->proto.args[i].type);
+        if (type_cdg.type->id == lang::types::TypeId::INVALID) {
+            return poly_type(invalid_type);
+        }
+    }
+    return lpf->proto.retval_t;
+}
+
+structs::TypeValuePair FuncCall::evaluate() const {
+
+    lang::types::InvalidType invalid_type;
+    if (this->check_type()->id == lang::types::TypeId::INVALID)
+        return {poly_type(invalid_type), nullptr};
+
+    std::optional<structs::LocProtoFuncTriple> lpf = AstNode::symbols.get_function(m_fname);
+    std::vector<llvm::Value *> converted_args;
+    std::vector<llvm::Type *> converted_types;
+
+
+    for (unsigned i=0; i < m_args.size(); i++) {
+        structs::TypeValuePair exp_eval = m_args[i]->evaluate();
+
+        if (exp_eval.type->id == lang::types::TypeId::INVALID || exp_eval.value == nullptr)
+            return { poly_type(invalid_type), nullptr };
+
+        structs::TypeCodegenFuncPair type_cdg = semantic::convert({exp_eval.type, exp_eval.value}, lpf->proto.args[i].type);
+        converted_args.push_back(type_cdg.codegen_func());
+        converted_types.push_back(codegen::llvm_type(type_cdg.type));
+    }
+
+    llvm::FunctionType *ftype = llvm::FunctionType::get(codegen::llvm_type(lpf->proto.retval_t), converted_types, false);
+    return { lpf->proto.retval_t, codegen::global::builder.CreateCall(ftype, lpf->func, converted_args, "call_" + lpf->proto.name) };
+}
+
+std::string FuncCall::str() const {
+    std::stringstream ss;
+    ss << "FuncCall("
+       << "name(" << m_fname << ')'
+       << "args(";
+
+    for (const polymorphic_value<Expression> &p_arg :  m_args)
+        ss << p_arg->str();
+
+    ss << "))";
+    return ss.str();
+}
 
 }  // namespace compiler::ast

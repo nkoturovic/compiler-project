@@ -1,5 +1,5 @@
 #include "../../include/codegen/symbol.hpp"
-
+#include <sstream>
 
 namespace compiler::codegen {
 
@@ -48,7 +48,47 @@ std::optional<structs::TypeValuePair> SymbolTable::get_variable(std::string id) 
     return {std::nullopt};
 }
 
-std::optional<structs::FuncProto> SymbolTable::get_function(std::string id) {
+std::optional<structs::Error> SymbolTable::declare_function(std::string id, structs::LocProtoFuncTriple lpf) {
+    auto it = m_declared_functions.find(id);
+    if (it == m_declared_functions.end()) {
+        this->m_declared_functions.insert({id, lpf});
+        return {std::nullopt};
+    } else /* already declared */ {
+        if (it->second.proto != lpf.proto) {
+            std::stringstream err_ss; 
+            err_ss << "Declaration of " << id 
+                   << " differs from previous declaration, declated at " 
+                   << it->second.loc;
+            return structs::Error{lpf.loc, err_ss.str()};
+        }
+    }
+    return {std::nullopt};
+}
+
+std::optional<structs::Error> SymbolTable::define_function(std::string id, structs::LocProtoFuncTriple lpf) {
+    std::optional<structs::Error> opt_err = declare_function(id, lpf);
+    if (opt_err.has_value())
+        return opt_err;
+
+    auto it = m_defined_functions.find(id);
+    if (it != m_defined_functions.end()) {
+        std::stringstream err_ss; 
+        err_ss << "Function " << id << " already defined at "
+           << it->second.loc;
+        return structs::Error{lpf.loc, err_ss.str()};
+    }
+
+    m_defined_functions.insert({id, lpf});
+
+    return {std::nullopt};
+}
+
+std::optional<structs::LocProtoFuncTriple> SymbolTable::get_function(std::string id) {
+    auto it = m_declared_functions.find(id);
+    if (it == m_declared_functions.end())
+        return {std::nullopt};
+    else
+        return it->second;
 }
 
 
@@ -77,7 +117,4 @@ void SymbolTable::update_variable(std::string id, structs::TypeValuePair tv) {
     }
     throw SymbolException("Cant update, Symbol " + id + " does not exists");
 }
-
-
-
 }

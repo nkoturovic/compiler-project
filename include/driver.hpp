@@ -31,6 +31,7 @@ class Driver {
     void scan_end();
     int parse(const std::string &file_path = "");
     void error(const yy::location &l, const std::string &msg) const;
+    void warning(const yy::location &l, const std::string &msg) const;
 };
 
 #endif

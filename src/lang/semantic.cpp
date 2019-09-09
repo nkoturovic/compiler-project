@@ -82,4 +82,28 @@ jbcoe::polymorphic_value<Type> unop_check(
     return poly_type(type);
 }
 
+
+structs::TypeCodegenFuncPair convert(const structs::TypeValuePair &type_value_pair, jbcoe::polymorphic_value<types::Type> to_type) {
+
+    llvm::Value * retval = type_value_pair.value;
+    if (*to_type == *type_value_pair.type)
+        return { type_value_pair.type, [&type_value_pair](){ return type_value_pair.value;} };
+
+    poly_type ret_type(to_type);
+    poly_type invalid_type = poly_type(lang::types::InvalidType());
+
+    if (to_type->id == lang::types::TypeId::DOUBLE && type_value_pair.type->id <= lang::types::TypeId::INT) {
+        retval = codegen::global::builder.CreateSIToFP(retval, codegen::llvm_type(to_type), "sitofp");
+    } else if (to_type->id <= lang::types::TypeId::INT && type_value_pair.type->id == lang::types::TypeId::DOUBLE) {
+        retval = codegen::global::builder.CreateFPToSI(retval, codegen::llvm_type(to_type), "fptosi");
+    } else if (to_type->id == lang::types::TypeId::PTR && type_value_pair.type->id == lang::types::TypeId::PTR) {
+        ret_type = invalid_type; retval = nullptr;
+    } else {
+        ret_type = invalid_type; retval = nullptr;
+    }
+    auto ret_func = [retval] { return retval; };
+
+    return {ret_type, ret_func};
+}
+
 }  // namespace compiler::lang::semantic
