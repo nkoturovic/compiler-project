@@ -12,7 +12,7 @@ OBJ_DIR = $(SRC_DIR)/obj
 LIB_DIR = $(SRC_DIR)/libs
 
 # Build rules
-$(GOAL): $(OBJ_DIR)/lex.yy.o $(OBJ_DIR)/parser.tab.o $(OBJ_DIR)/driver.o $(OBJ_DIR)/ast.o $(OBJ_DIR)/types.o $(OBJ_DIR)/operators.o $(OBJ_DIR)/semantic.o $(OBJ_DIR)/structs.o $(OBJ_DIR)/codegen.o
+$(GOAL): $(OBJ_DIR)/lex.yy.o $(OBJ_DIR)/parser.tab.o $(OBJ_DIR)/driver.o $(OBJ_DIR)/ast.o $(OBJ_DIR)/types.o $(OBJ_DIR)/operators.o $(OBJ_DIR)/semantic.o $(OBJ_DIR)/structs.o $(OBJ_DIR)/codegen.o $(OBJ_DIR)/symbol.o
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^
 
 $(OBJ_DIR)/parser.tab.o: $(SRC_DIR)/parser.tab.cpp $(INC_DIR)/parser.tab.hpp $(INC_DIR)/driver.hpp
@@ -41,6 +41,10 @@ $(OBJ_DIR)/structs.o: $(SRC_DIR)/structs.cpp $(INC_DIR)/structs.hpp
 
 $(OBJ_DIR)/codegen.o: $(SRC_DIR)/codegen/codegen.cpp $(INC_DIR)/codegen/codegen.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(OBJ_DIR)/symbol.o: $(SRC_DIR)/codegen/symbol.cpp $(INC_DIR)/codegen/symbol.hpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
 
 $(SRC_DIR)/lex.yy.c: $(SRC_DIR)/lexer.lex
 	flex -o $@ $<

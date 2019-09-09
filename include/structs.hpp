@@ -1,7 +1,7 @@
 #ifndef __STRUCTS_H__
 #define __STRUCTS_H__
 
-#include <stack>
+#include <vector>
 #include "lang/types.hpp"
 #include "location.hh"
 #include "third_party/polymorphic_value.h"
@@ -20,10 +20,17 @@ struct FuncArg {
     std::string name{};
 };
 
+struct FuncProto {
+   std::string name;
+   std::vector<structs::FuncArg> args;
+   jbcoe::polymorphic_value<lang::types::Type> retval_t;
+};
+
 struct TypeValuePair {
     jbcoe::polymorphic_value<lang::types::Type> type;
     llvm::Value *value;
 };
+
 
 
 }  // namespace compiler::structs

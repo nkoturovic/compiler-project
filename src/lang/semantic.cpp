@@ -63,11 +63,13 @@ jbcoe::polymorphic_value<Type> binop_check(
 
     // is basic type check (if type <= DOUBLE than is Basic type)
     if (op1_t->id <= TypeId::DOUBLE || op2_t->id <= TypeId::DOUBLE) {
-        const BasicType &op1_basic_t = dynamic_cast<const BasicType &>(*op1_t);
-        const BasicType &op2_basic_t = dynamic_cast<const BasicType &>(*op2_t);
-        return poly_type(std::max<BasicType>(
-            std::max<BasicType>(op1_basic_t, op2_basic_t), IntType()));
+        auto max_t = op1_t->id > op2_t->id ? op1_t : op2_t;
+        max_t = max_t->id >= TypeId::INT ? max_t : poly_type(IntType());
+        //std::cout << op1_t->str() << "," << op2_t->str() << "->";
+        //std::cout << max_t->str() << std::endl;
+        return max_t;
     }
+
 
     return poly_type(InvalidType());
 }

@@ -120,10 +120,9 @@ class UnOp : public Expression {
 };
 
 class Block : public Statement {
-   private:
+   public:
     std::vector<jbcoe::polymorphic_value<Statement>> m_statements;
 
-   public:
     Block(yy::location loc,
           std::vector<jbcoe::polymorphic_value<Statement>> statements);
     virtual llvm::Value* codegen() const override;
@@ -140,27 +139,39 @@ class OuterDecl : public AstNode {
 
 
 class FuncDecl : public OuterDecl {
+  private:
+    compiler::structs::FuncProto m_prototype;
+
   public:
-   std::string m_name;
-   std::vector<structs::FuncArg> m_args;
-   jbcoe::polymorphic_value<lang::types::Type> m_retval_t;
 
-
-    FuncDecl(std::string name, std::vector<structs::FuncArg> args,
-             jbcoe::polymorphic_value<lang::types::Type> retval_t);
+    FuncDecl(yy::location loc, structs::FuncProto prototype);
     virtual llvm::Function* codegen() const override;
     virtual std::string str() const override;
 
     friend class FuncDef;
 };
 
+
+class ReturnStmt : public Statement {
+public:
+    ReturnStmt(yy::location loc, jbcoe::polymorphic_value<Expression> expr);
+    virtual llvm::Value* codegen() const override;
+    virtual std::string str() const override;
+private:
+    jbcoe::polymorphic_value<Expression> m_expr;
+};
+
+
 class FuncDef : public OuterDecl {
    private:
+    static inline FuncDef * sm_current_codegen_instance = nullptr;
     FuncDecl m_prototype;
     Block m_body;
 
    public:
-    FuncDef(FuncDecl prototype, Block body);
+    static structs::FuncProto current_codegen_proto();
+
+    FuncDef(yy::location loc, FuncDecl prototype, Block body);
     virtual llvm::Function* codegen() const override;
     virtual std::string str() const override;
 };

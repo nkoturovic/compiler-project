@@ -52,6 +52,7 @@ void_kw_token "void"
 int_kw_token "int"          
 double_kw_token "double"          
 char_kw_token "char"          
+return_token "return"          
 crl_lparen_token "{"            
 crl_rparen_token "}"            
 sqr_lparen_token "["            
@@ -126,9 +127,10 @@ pipe_token "|"
 /* Program is sequence of outer declarations ended by EOF  */
 Program : Seq_of_outer_decl eof_token { 
             $$ = move($1); 
-            for (const poly_val<ast::OuterDecl> &pval_decl : $$) {
-                std::cout << *pval_decl;
-            }
+            // AST to_string -> cout
+            // for (const poly_val<ast::OuterDecl> &pval_decl : $$) {
+            //    std::cout << *pval_decl;
+            // }
 
             for (const poly_val<ast::OuterDecl> &pval_decl : $$) {
                 pval_decl->codegen();
@@ -145,9 +147,9 @@ Outer_decl : Func_def { $$ = move($1); }
            ;
 
 Func_def : Type id_token "(" List_of_args ")" Block { 
-             // TODO: pazljivo, ali trebalo bi da je ovaj cast dobar
-             ast::Block &body = dynamic_cast<ast::Block&>(*$6);
-             $$ = poly_val<ast::OuterDecl>(ast::FuncDef(ast::FuncDecl(move($2), move($4), move($1)), move(body)));
+            ast::Block &body = dynamic_cast<ast::Block&>(*$6);
+            yy::location loc = @$; loc.begin = @1.begin; loc.end = @5.end;
+            $$ = poly_val<ast::OuterDecl>(ast::FuncDef(@$, ast::FuncDecl(loc,structs::FuncProto{move($2), move($4), move($1)}), move(body)));
          } 
          ;
 
@@ -175,6 +177,7 @@ Sprt_stmt : Expr {
             $$ = poly_val<ast::Statement>(move($1));
           }
           | print_token "(" List_of_expr ")" {}
+          | "return" Expr { $$ = poly_val<ast::Statement>(ast::ReturnStmt(@$, $2)); }
 	      ;
 
 Type : Basic_type { $$ = move($1); }

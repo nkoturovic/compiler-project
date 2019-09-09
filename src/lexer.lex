@@ -36,6 +36,7 @@ loc.step();
 "int" { return yy::parser::make_int_kw_token(loc); }
 "double" { return yy::parser::make_double_kw_token(loc); }
 "char" { return yy::parser::make_char_kw_token(loc); }
+"return" { return yy::parser::make_return_token(loc); }
 {ID} { return yy::parser::make_id_token(yytext, loc); }
 "{" { return yy::parser::make_crl_lparen_token(loc); }
 "}" { return yy::parser::make_crl_rparen_token(loc); }
