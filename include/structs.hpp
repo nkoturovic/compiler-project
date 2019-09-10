@@ -9,6 +9,7 @@
 #include "third_party/polymorphic_value.h"
 
 namespace llvm {class Value;}
+namespace compiler::ast {class Expression;}
 
 namespace compiler::structs {
 
@@ -45,6 +46,11 @@ struct LocProtoFuncTriple {
     yy::location loc;
     FuncProto proto;
     llvm::Function* func;
+};
+
+struct StrOptExprPair {
+    std::string str;
+    std::optional<jbcoe::polymorphic_value<ast::Expression>> expr;
 };
 
 

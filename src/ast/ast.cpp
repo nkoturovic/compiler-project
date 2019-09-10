@@ -134,8 +134,9 @@ structs::TypeValuePair Variable::evaluate() const {
         return {type, nullptr}; 
     }
 
-    std::optional<structs::TypeValuePair> opt_var = symbols.get_variable(m_id);
-    return opt_var.value();
+    std::optional<structs::TypeValuePair> opt_tv = symbols.get_variable(m_id);
+    llvm::Value * val = codegen::global::builder.CreateLoad(codegen::llvm_type(opt_tv->type), opt_tv.value().value, "tmp"); 
+    return {opt_tv->type, val};
 }
 
 
@@ -360,7 +361,6 @@ llvm::Function* FuncDecl::codegen() const {
 }
 
 std::string FuncDecl::str() const {
-    /* TODO */
     std::stringstream ss;
     ss << "FuncDeclaration("
        << "FName("<< m_prototype.name << "),Args(";
@@ -502,6 +502,90 @@ std::string FuncCall::str() const {
 
     ss << "))";
     return ss.str();
+}
+
+VariableDecl::VariableDecl(yy::location loc, poly_type type, std::vector<structs::StrOptExprPair> var_decl_list)
+                : Statement(std::move(loc)), m_type(std::move(type)), m_var_decl_list(move(var_decl_list)) {}
+
+llvm::Value* VariableDecl::codegen() const {
+    for (const auto& [n, opt_e] : m_var_decl_list) {
+        std::optional<structs::TypeValuePair> opt_tv = symbols.get_variable(n);
+        if (opt_tv.has_value()) {
+            errors.push_back({this->loc, "Variable " + n + " already defined"});
+            return nullptr;
+        } else {
+            llvm::Value * ai = codegen::global::builder.CreateAlloca(codegen::llvm_type(m_type), 0, n);
+            if (opt_e.has_value()) {
+                structs::TypeCodegenFuncPair type_cdg = semantic::convert(opt_e.value()->evaluate(), m_type);
+                codegen::global::builder.CreateStore(type_cdg.codegen_func(), ai, true);
+                if (type_cdg.type->id == lang::types::TypeId::INVALID) {
+                    errors.push_back({this->loc, "Invalid type of expression "});
+                    return nullptr;
+                }
+            }
+            symbols.define_variable(n, {m_type, ai});
+        }
+    }
+    return nullptr;
+}
+
+std::string VariableDecl::str() const {
+    std::stringstream ss;
+    ss << "VariableDecl(" << "Type(" << m_type->str() << "),";
+
+    for (const auto& [n, opt_e] : m_var_decl_list) {
+        ss << "name(" << n << "),";
+        if (opt_e.has_value())
+            ss << opt_e.value()->str();
+    }
+    ss << ')';
+
+    return ss.str();
+}
+
+VariableAssign::VariableAssign(yy::location loc, std::string id, jbcoe::polymorphic_value<Expression> expr) 
+                        : Expression(std::move(loc)), m_id(std::move(id)), m_expr(std::move(expr)) {}
+
+
+poly_type VariableAssign::check_type() const {
+    std::optional<structs::TypeValuePair> opt_tv = symbols.get_variable(m_id);
+    auto invalid_type = poly_type(lang::types::InvalidType());
+    if (!opt_tv.has_value()) {
+        errors.push_back({loc, "Undefined variable " + m_id});
+        return invalid_type;
+    }
+
+    if (opt_tv.value().type->id == invalid_type->id ||
+                                    opt_tv->value == nullptr) {
+         errors.push_back({loc, "Invalid variable " + m_id});
+         return invalid_type;
+    }
+    return opt_tv->type;
+}
+
+structs::TypeValuePair VariableAssign::evaluate() const {
+    auto invalid_type = poly_type(lang::types::InvalidType());
+    poly_type tc = this->check_type();
+
+    if (tc->id == lang::types::TypeId::INVALID)
+        return {invalid_type, nullptr};
+
+    std::optional<structs::TypeValuePair> opt_tv = symbols.get_variable(m_id);
+    structs::TypeValuePair expr_eval = m_expr->evaluate();
+
+    structs::TypeCodegenFuncPair t_cdg = semantic::convert(expr_eval, tc);
+    if (t_cdg.type->id != tc->id) {
+         errors.push_back({loc, "Can't assign value of type " + tc->str() + " to variable of type " + opt_tv->type->str()});
+         return {invalid_type, nullptr};
+    }
+
+    codegen::global::builder.CreateStore(t_cdg.codegen_func(), opt_tv->value, true);
+
+    return {tc, opt_tv->value};
+}
+
+std::string VariableAssign::str() const {
+    return "VariableAssign(" + m_id + m_expr->str() + ")";
 }
 
 }  // namespace compiler::ast

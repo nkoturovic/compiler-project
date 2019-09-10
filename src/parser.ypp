@@ -100,6 +100,8 @@ pipe_token "|"
 %type <vector<poly_val<ast::Statement>>> List_of_stmts 
 %type <vector<poly_val<ast::Expression>>> List_of_expr Parameters
 %type <vector<structs::FuncArg>> List_of_args
+%type <structs::StrOptExprPair> Variable_decl
+%type <vector<structs::StrOptExprPair>> Variable_decl_list
 
 %left "="
 %left "&&"
@@ -178,8 +180,18 @@ Sprt_stmt : Expr {
             $$ = poly_val<ast::Statement>(move($1));
           }
           | print_token "(" List_of_expr ")" {}
-          | "return" Expr { $$ = poly_val<ast::Statement>(ast::ReturnStmt(@$, $2)); }
+          | Type Variable_decl_list { $$ = poly_val<ast::Statement>(ast::VariableDecl(@$, move($1), move($2))); }
+          | "return" Expr { $$ = poly_val<ast::Statement>(ast::ReturnStmt(@$, move($2))); }
 	      ;
+
+/********** Variable declaration **********/
+Variable_decl_list : Variable_decl_list "," Variable_decl { $$ = $1; $$.push_back(move($3)); }
+                   | Variable_decl { $$ = {}; $$.push_back(move($1)); }
+                   ;
+
+Variable_decl : id_token { $$ = structs::StrOptExprPair{$1, std::nullopt}; }
+         | id_token "=" Expr { $$ = structs::StrOptExprPair{$1, $3}; }
+         ;
 
 Type : Basic_type { $$ = move($1); }
      | Pointer_type { $$ = move($1); }
@@ -214,6 +226,7 @@ Expr : "(" Expr ")" { $$ = move($2); }
      | Expr "==" Expr { $$ = poly_expr(ast::BinOp(@$, lang::operators::BinOpId::EQ, move($1), move($3))); }
      | Expr "!=" Expr { $$ = poly_expr(ast::BinOp(@$, lang::operators::BinOpId::NEQ, move($1), move($3))); }
      | Expr "%" Expr { $$ = poly_expr(ast::BinOp(@$, lang::operators::BinOpId::MOD, move($1), move($3)));  }
+     | id_token "=" Expr { $$ = poly_expr(ast::VariableAssign(@$, move($1), move($3))); }
      | id_token "[" Expr "]" { }
      | "!" Expr { $$ = poly_expr(ast::UnOp(@$, lang::operators::UnOpId::L_NOT, move($2))); }
      | "~" Expr { $$ = poly_expr(ast::UnOp(@$, lang::operators::UnOpId::B_NOT, move($2))); }
@@ -240,9 +253,10 @@ List_of_expr : List_of_expr "," Expr { $$ = $1; $$.push_back(move($3)); }
              | Expr { $$ = {}; $$.push_back(move($1)); }
              ;
 
-LVal : id_token { }
-     | id_token "[" Expr "]" { }
-     ;
+/* Lval : id_token { }
+*      | id_token "[" Expr "]" { }
+*      ;
+*/
 
 %%
 

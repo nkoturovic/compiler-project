@@ -114,6 +114,32 @@ class Variable : public Expression {
     virtual std::string str() const override;
 };
 
+class VariableDecl : public Statement {
+    private:
+        jbcoe::polymorphic_value<lang::types::Type> m_type;
+        std::vector<structs::StrOptExprPair> m_var_decl_list;
+        
+    public:
+    VariableDecl(yy::location loc, jbcoe::polymorphic_value<lang::types::Type> type, std::vector<structs::StrOptExprPair> var_decl_list);
+
+    virtual llvm::Value* codegen() const override;
+    virtual std::string str() const override;
+};
+
+class VariableAssign : public Expression {
+    private:
+    std::string m_id;
+    jbcoe::polymorphic_value<Expression> m_expr;
+        
+    public:
+    VariableAssign(yy::location loc, std::string id, jbcoe::polymorphic_value<Expression> expr);
+
+    virtual jbcoe::polymorphic_value<lang::types::Type> check_type() const override;
+    virtual structs::TypeValuePair evaluate() const override;
+    virtual std::string str() const override;
+};
+
+
 class BinOp : public Expression {
    private:
     lang::operators::BinOpId m_op_id;
