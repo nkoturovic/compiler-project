@@ -17,10 +17,8 @@ bool Type::operator==(const Type &rhs) const {
             return true;
         else
             return false;
-    } else {
-        return true;
     }
-    return false;
+    return true;
 }
 
 bool Type::operator!=(const Type &rhs) const { return !(*this == rhs); }

@@ -47,6 +47,7 @@ void yy::parser::error(const location_type& l, const string& msg) {
 eof_token 0 "end of file"	
 print_token "print"          
 if_token "if"          
+else_token "else"
 while_token "while"          
 void_kw_token "void"          
 int_kw_token "int"          
@@ -93,7 +94,7 @@ pipe_token "|"
 %token <string> string_token "String literal";
 
 %type <poly_val<ast::OuterDecl>> Outer_decl Func_def
-%type <poly_val<ast::Statement>> Stmt Sprt_stmt Block
+%type <poly_val<ast::Statement>> Stmt Sprt_stmt Block If_else_stmt
 %type <poly_val<ast::Expression>> Expr Literal Func_call
 %type <poly_type> Type Basic_type Pointer_type
 %type <vector<poly_val<ast::OuterDecl>>> Seq_of_outer_decl Program
@@ -124,6 +125,10 @@ pipe_token "|"
 %nonassoc UMINUS UPLUS
 %nonassoc CALL
 
+/* If_statement precedence */
+%precedence NOELSE
+%precedence ELSE
+
 %%
 
 
@@ -131,9 +136,9 @@ pipe_token "|"
 Program : Seq_of_outer_decl eof_token { 
             $$ = move($1); 
             // AST to_string -> cout
-            for (const poly_val<ast::OuterDecl> &pval_decl : $$) {
-               std::cout << *pval_decl;
-            }
+            // for (const poly_val<ast::OuterDecl> &pval_decl : $$) {
+            //    std::cout << *pval_decl;
+            // }
 
             for (const poly_val<ast::OuterDecl> &pval_decl : $$) {
                 pval_decl->codegen();
@@ -174,6 +179,7 @@ List_of_stmts : List_of_stmts Stmt { $$ = move($1); $$.push_back(move($2)); }
 Stmt : Sprt_stmt ";" { $$ = move($1); } /* Stmt that ends with separator  */
      | ";" { } /* TODO: Empty statement */ {}
      | Block { $$ = move($1); }
+     | If_else_stmt { $$ = move($1); }
      ;
 
 Sprt_stmt : Expr { 
@@ -252,6 +258,12 @@ Parameters : List_of_expr { $$ = move($1); };
 List_of_expr : List_of_expr "," Expr { $$ = $1; $$.push_back(move($3)); }
              | Expr { $$ = {}; $$.push_back(move($1)); }
              ;
+
+/* Program flow control */
+If_else_stmt : "if" "(" Expr ")" Stmt %prec NOELSE { $$ = poly_val<ast::Statement>(ast::IfElse(@$, move($3), move($5), {nullopt})); }
+             | "if" "(" Expr ")" Stmt "else" Stmt %prec ELSE { $$ = poly_val<ast::Statement>(ast::IfElse(@$, move($3), move($5), move($7))); }
+             ;
+
 
 /* Lval : id_token { }
 *      | id_token "[" Expr "]" { }

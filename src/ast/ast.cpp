@@ -30,6 +30,67 @@ std::ostream& operator<<(std::ostream &out, const AstNode& node) {
 
 Statement::Statement(yy::location loc) : AstNode(std::move(loc)) {}
 
+IfElse::IfElse(yy::location loc, jbcoe::polymorphic_value<Expression> condition, jbcoe::polymorphic_value<Statement> if_branch, std::optional<jbcoe::polymorphic_value<Statement>> opt_else_branch) : Statement(std::move(loc)), m_condition(std::move(condition)), m_if_branch(std::move(if_branch)), m_opt_else_branch(std::move(opt_else_branch)) { }
+
+
+ llvm::Value* IfElse::codegen() const { 
+     structs::TypeValuePair tv_cond_eval = m_condition->evaluate();
+     poly_type poly_int_t = poly_type(lang::types::IntType());
+     structs::TypeCodegenFuncPair type_fcdg = semantic::convert(tv_cond_eval, poly_int_t);
+
+     if (type_fcdg.type->id != lang::types::TypeId::INT) {
+         errors.push_back({m_condition->loc, "Invalid condition"});
+         return nullptr;
+     }
+
+     llvm::Value * cmp_val = type_fcdg.codegen_func();
+
+     llvm::Constant * zero_val = llvm::ConstantInt::get(codegen::llvm_type(type_fcdg.type), 0, true);
+     llvm::Value * cond_val = codegen::global::builder.CreateICmpNE(cmp_val, zero_val, "condition");
+
+     llvm::Function *curr_func = codegen::global::builder.GetInsertBlock()->getParent();
+
+     llvm::BasicBlock * if_branch_BB = llvm::BasicBlock::Create(codegen::global::context, "if_branch");
+     llvm::BasicBlock * else_branch_BB = llvm::BasicBlock::Create(codegen::global::context, "else_branch");
+     llvm::BasicBlock * merge_BB = llvm::BasicBlock::Create(codegen::global::context, "merge");
+     curr_func->getBasicBlockList().push_back(if_branch_BB);
+     codegen::global::builder.CreateCondBr(cond_val, if_branch_BB, else_branch_BB);
+     codegen::global::builder.SetInsertPoint(if_branch_BB);
+     llvm::Value * if_br_val = m_if_branch->codegen();
+
+     codegen::global::builder.CreateBr(merge_BB);
+     if_branch_BB = codegen::global::builder.GetInsertBlock();
+
+     curr_func->getBasicBlockList().push_back(else_branch_BB);
+     codegen::global::builder.SetInsertPoint(else_branch_BB);
+
+     llvm::Value * else_br_val = nullptr;
+     if (m_opt_else_branch.has_value())
+        else_br_val = m_opt_else_branch.value()->codegen();
+
+     codegen::global::builder.CreateBr(merge_BB);
+     else_branch_BB = codegen::global::builder.GetInsertBlock();
+
+     curr_func->getBasicBlockList().push_back(merge_BB);
+     codegen::global::builder.SetInsertPoint(merge_BB);
+
+
+     return cond_val;
+ }
+
+ std::string IfElse::str() const {
+    std::stringstream ss;
+    ss << "ifElse(" << "Condition(" << m_condition->str() << ')'
+       << "ifBranch(" << m_if_branch->str() << ")";
+
+    if (m_opt_else_branch.has_value())
+        ss << "ElseBranch(" << m_opt_else_branch.value()->str() << ")";
+
+    ss << ')';
+    return ss.str();
+ }
+
+
 Expression::Expression(yy::location loc) : Statement(std::move(loc)) {}
 
 llvm::Value* Expression::codegen() const {
@@ -58,7 +119,7 @@ CharLiteral::CharLiteral(yy::location loc, char c)
 
 structs::TypeValuePair CharLiteral::evaluate() const {
     polymorphic_value<lang::types::Type> type = polymorphic_value<lang::types::Type>(lang::types::CharType());
-    llvm::Value * val = llvm::ConstantInt::get(codegen::llvm_type(type), m_val);
+    llvm::Value * val = llvm::ConstantInt::get(codegen::llvm_type(type), m_val, true);
     return {type, val};
 }
 
@@ -73,7 +134,7 @@ IntLiteral::IntLiteral(yy::location loc, int i)
 
 structs::TypeValuePair IntLiteral::evaluate() const {
     polymorphic_value<lang::types::Type> type = polymorphic_value<lang::types::Type>(lang::types::IntType());
-    llvm::Value * val = llvm::ConstantInt::get(codegen::llvm_type(type), m_val);
+    llvm::Value * val = llvm::ConstantInt::get(codegen::llvm_type(type), m_val, true);
     return {type, val};
 }
 
@@ -200,10 +261,10 @@ structs::TypeValuePair BinOp::evaluate() const {
      llvm::Value * lhs_value = lhs_tv.value;
      llvm::Value * rhs_value = rhs_tv.value;
      llvm::Value * result_value = nullptr;
-     if (result_type->id == lang::types::TypeId::INT) {
+     if (result_type->id <= lang::types::TypeId::INT) {
         if (lhs_tv.type->id == lang::types::TypeId::DOUBLE) 
              lhs_value = codegen::global::builder.CreateFPToSI(lhs_tv.value, codegen::llvm_type(result_type), "fptosi");
-        if (rhs_tv.type->id == lang::types::TypeId::DOUBLE) 
+        if (rhs_tv.type->id <= lang::types::TypeId::DOUBLE) 
              rhs_value = codegen::global::builder.CreateFPToSI(rhs_tv.value, codegen::llvm_type(result_type), "fptosi");
 
          switch(m_op_id) {
@@ -217,16 +278,41 @@ structs::TypeValuePair BinOp::evaluate() const {
                  result_value = codegen::global::builder.CreateMul(lhs_value, rhs_value, "imul");
                  break;
             case lang::operators::BinOpId::DIV :
-                 result_value = codegen::global::builder.CreateUDiv(lhs_value, rhs_value, "idiv");
+                 result_value = codegen::global::builder.CreateSDiv(lhs_value, rhs_value, "idiv");
                  break;
+            case lang::operators::BinOpId::EQ :
+                 result_value = codegen::global::builder.CreateICmpEQ(lhs_value, rhs_value, "ieq");
+                 result_value = codegen::global::builder.CreateIntCast(result_value, codegen::llvm_type(result_type), 1, "i1toi32");
+                 break;
+            case lang::operators::BinOpId::NEQ :
+                 result_value = codegen::global::builder.CreateICmpNE(lhs_value, rhs_value, "ineq");
+                 result_value = codegen::global::builder.CreateIntCast(result_value, codegen::llvm_type(result_type), 1, "i1toi32");
+                 break;
+            case lang::operators::BinOpId::LT :
+                 result_value = codegen::global::builder.CreateICmpSLT(lhs_value, rhs_value, "ilt");
+                 result_value = codegen::global::builder.CreateIntCast(result_value, codegen::llvm_type(result_type), 1, "i1toi32");
+                 break;
+            case lang::operators::BinOpId::GT :
+                 result_value = codegen::global::builder.CreateICmpSGT(lhs_value, rhs_value, "igt");
+                 result_value = codegen::global::builder.CreateIntCast(result_value, codegen::llvm_type(result_type), 1, "i1toi32");
+                 break;
+            case lang::operators::BinOpId::LEQ :
+                 result_value = codegen::global::builder.CreateICmpSLE(lhs_value, rhs_value, "ileq");
+                 result_value = codegen::global::builder.CreateIntCast(result_value, codegen::llvm_type(result_type), 1, "i1toi32");
+                 break;
+            case lang::operators::BinOpId::GEQ :
+                 result_value = codegen::global::builder.CreateICmpSGE(lhs_value, rhs_value, "igeq");
+                 result_value = codegen::global::builder.CreateIntCast(result_value, codegen::llvm_type(result_type), 1, "i1toi32");
+                 break;
+           
             default:
                  result_value = nullptr;
          }
      } else if (result_type->id == lang::types::TypeId::DOUBLE) {
 
-         if (lhs_tv.type->id == lang::types::TypeId::INT) 
+         if (lhs_tv.type->id <= lang::types::TypeId::INT) 
               lhs_value = codegen::global::builder.CreateSIToFP(lhs_tv.value, codegen::llvm_type(result_type), "sitofp");
-         if (rhs_tv.type->id == lang::types::TypeId::INT) 
+         if (rhs_tv.type->id <= lang::types::TypeId::INT) 
               rhs_value = codegen::global::builder.CreateSIToFP(rhs_tv.value, codegen::llvm_type(result_type), "sitofp");
 
          switch(m_op_id) {
@@ -242,6 +328,31 @@ structs::TypeValuePair BinOp::evaluate() const {
             case lang::operators::BinOpId::DIV :
                  result_value = codegen::global::builder.CreateFDiv(lhs_value, rhs_value, "fdiv");
                  break;
+            case lang::operators::BinOpId::EQ :
+                 result_value = codegen::global::builder.CreateFCmpUEQ(lhs_value, rhs_value, "feq");
+                 result_value = codegen::global::builder.CreateIntCast(result_value, codegen::llvm_type(result_type), 1, "i1toi32");
+                 break;
+            case lang::operators::BinOpId::NEQ :
+                 result_value = codegen::global::builder.CreateFCmpUNE(lhs_value, rhs_value, "fneq");
+                 result_value = codegen::global::builder.CreateIntCast(result_value, codegen::llvm_type(result_type), 1, "i1toi32");
+                 break;
+            case lang::operators::BinOpId::LT :
+                 result_value = codegen::global::builder.CreateFCmpULT(lhs_value, rhs_value, "flt");
+                 result_value = codegen::global::builder.CreateIntCast(result_value, codegen::llvm_type(result_type), 1, "i1toi32");
+                 break;
+            case lang::operators::BinOpId::GT :
+                 result_value = codegen::global::builder.CreateFCmpUGT(lhs_value, rhs_value, "fgt");
+                 result_value = codegen::global::builder.CreateIntCast(result_value, codegen::llvm_type(result_type), 1, "i1toi32");
+                 break;
+            case lang::operators::BinOpId::LEQ :
+                 result_value = codegen::global::builder.CreateFCmpULE(lhs_value, rhs_value, "fleq");
+                 result_value = codegen::global::builder.CreateIntCast(result_value, codegen::llvm_type(result_type), 1, "i1toi32");
+                 break;
+            case lang::operators::BinOpId::GEQ :
+                 result_value = codegen::global::builder.CreateFCmpUGE(lhs_value, rhs_value, "fgeq");
+                 result_value = codegen::global::builder.CreateIntCast(result_value, codegen::llvm_type(result_type), 1, "i1toi32");
+                 break;
+
            default:
                  result_value = nullptr;
          }
@@ -286,12 +397,7 @@ polymorphic_value<types::Type> UnOp::check_type() const {
 
 structs::TypeValuePair UnOp::evaluate() const {
     /* TODO */
-    std::cout << "UnOp: " +
-                     lang::operators::UnOpInfo::unop_id_to_string(this->m_op_id)
-              << std::endl;
-    this->m_expr->codegen();
-    return {};  // Data::do_un_op(m_op_id, m_expr->evaluate(),
-                // this->check_type());
+    return { poly_type(lang::types::InvalidType()), nullptr };
 }
 
 std::string UnOp::str() const {
@@ -310,10 +416,11 @@ Block::Block(yy::location loc,
 
 llvm::Value* Block::codegen() const {
     AstNode::symbols.begin_scope();
+    llvm::Value * retval = nullptr;
     for (auto& s : m_statements) 
-        s->codegen();
+        retval = s->codegen();
     AstNode::symbols.end_scope();
-    return nullptr;
+    return retval;
 }
 
 std::string Block::str() const {
@@ -363,13 +470,17 @@ llvm::Function* FuncDecl::codegen() const {
 std::string FuncDecl::str() const {
     std::stringstream ss;
     ss << "FuncDeclaration("
-       << "FName("<< m_prototype.name << "),Args(";
+       << "FName("<< m_prototype.name << ")Args(";
 
     for (auto& [t, n] : m_prototype.args) 
-        ss << t->str() << " " << n << ',';
-    ss << "),"
+        ss << t->str() << " " << n; // << ',';
+    ss << ")"
        << "ReturnType(" << m_prototype.retval_t->str() << "))";
     return ss.str();
+}
+
+const structs::FuncProto& FuncDecl::prototype() const {
+    return m_prototype;
 }
 
 FuncDef::FuncDef(yy::location loc, FuncDecl prototype, Block body)
@@ -383,7 +494,27 @@ llvm::Function* FuncDef::codegen() const {
     llvm::BasicBlock *entry = llvm::BasicBlock::Create(codegen::global::context, "entrypoint", func);
     codegen::global::builder.SetInsertPoint(entry);
     symbols.define_function(m_prototype.m_prototype.name, {this->loc, m_prototype.m_prototype, func});
-    m_body.codegen();
+
+    if (symbols.num_of_scopes() > 0)
+        symbols.push_scope();
+
+    symbols.begin_scope();
+        std::vector <llvm::AllocaInst*> arg_values;
+        for (llvm::Argument &arg : func->args()) {
+            llvm::AllocaInst *ai = codegen::global::builder.CreateAlloca(arg.getType(), 0, nullptr,arg.getName());
+            arg_values.push_back(ai);
+            codegen::global::builder.CreateStore(&arg, ai);
+        }
+
+        for (unsigned i = 0; i < m_prototype.m_prototype.args.size(); i++) {
+            symbols.define_variable(m_prototype.m_prototype.args[i].name, { m_prototype.m_prototype.args[i].type, arg_values[i]});
+        }
+
+        m_body.codegen();
+    symbols.end_scope();
+
+    if (symbols.num_of_scopes() > 0)
+        symbols.pop_scope();
 
   return func;
 }
@@ -395,6 +526,11 @@ structs::FuncProto FuncDef::current_codegen_proto() {
         return sm_current_codegen_instance->m_prototype.m_prototype;
 }
 
+
+const structs::FuncProto& FuncDef::prototype() const {
+    return m_prototype.m_prototype;
+}
+
 std::string FuncDef::str() const {
     std::stringstream ss;
     ss << "FunctionDef("
@@ -403,6 +539,7 @@ std::string FuncDef::str() const {
        << ')';
     return ss.str();
 }
+
 
 ReturnStmt::ReturnStmt(yy::location loc, jbcoe::polymorphic_value<Expression> expr)
     : Statement(std::move(loc)), m_expr(std::move(expr)) { }
@@ -468,7 +605,7 @@ polymorphic_value<lang::types::Type> FuncCall::check_type() const {
 structs::TypeValuePair FuncCall::evaluate() const {
 
     lang::types::InvalidType invalid_type;
-    if (this->check_type()->id == lang::types::TypeId::INVALID)
+    if (this->check_type()->id == lang::types::TypeId::INVALID) 
         return {poly_type(invalid_type), nullptr};
 
     std::optional<structs::LocProtoFuncTriple> lpf = AstNode::symbols.get_function(m_fname);
@@ -508,13 +645,14 @@ VariableDecl::VariableDecl(yy::location loc, poly_type type, std::vector<structs
                 : Statement(std::move(loc)), m_type(std::move(type)), m_var_decl_list(move(var_decl_list)) {}
 
 llvm::Value* VariableDecl::codegen() const {
+    llvm::Value * ai = nullptr;
     for (const auto& [n, opt_e] : m_var_decl_list) {
         std::optional<structs::TypeValuePair> opt_tv = symbols.get_variable(n);
         if (opt_tv.has_value()) {
             errors.push_back({this->loc, "Variable " + n + " already defined"});
             return nullptr;
         } else {
-            llvm::Value * ai = codegen::global::builder.CreateAlloca(codegen::llvm_type(m_type), 0, n);
+            ai = codegen::global::builder.CreateAlloca(codegen::llvm_type(m_type), 0, n);
             if (opt_e.has_value()) {
                 structs::TypeCodegenFuncPair type_cdg = semantic::convert(opt_e.value()->evaluate(), m_type);
                 codegen::global::builder.CreateStore(type_cdg.codegen_func(), ai, true);
@@ -524,9 +662,10 @@ llvm::Value* VariableDecl::codegen() const {
                 }
             }
             symbols.define_variable(n, {m_type, ai});
+            return ai;
         }
     }
-    return nullptr;
+    return ai;
 }
 
 std::string VariableDecl::str() const {
@@ -534,7 +673,7 @@ std::string VariableDecl::str() const {
     ss << "VariableDecl(" << "Type(" << m_type->str() << "),";
 
     for (const auto& [n, opt_e] : m_var_decl_list) {
-        ss << "name(" << n << "),";
+        ss << "name(" << n << ')'; // << ',';
         if (opt_e.has_value())
             ss << opt_e.value()->str();
     }
@@ -585,7 +724,7 @@ structs::TypeValuePair VariableAssign::evaluate() const {
 }
 
 std::string VariableAssign::str() const {
-    return "VariableAssign(" + m_id + m_expr->str() + ")";
+    return "VariableAssign(" + std::string("name(") + m_id + ")" + "value(" + m_expr->str() + "))";
 }
 
 }  // namespace compiler::ast

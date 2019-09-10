@@ -41,6 +41,31 @@ class Statement : public AstNode {
     virtual llvm::Value* codegen() const = 0;
 };
 
+class If : public Statement {
+    private:
+        jbcoe::polymorphic_value<Expression> m_condition;
+        jbcoe::polymorphic_value<Statement> m_if_branch;
+        std::optional<jbcoe::polymorphic_value<Statement>> m_opt_else_branch;
+
+    public:
+        If(yy::location loc, jbcoe::polymorphic_value<Expression> condition, jbcoe::polymorphic_value<Statement> if_branch, std::optional<jbcoe::polymorphic_value<Statement>> opt_else_branch);
+        virtual llvm::Value* codegen() const override;
+        virtual std::string str() const override;
+};
+
+
+class IfElse : public Statement {
+    private:
+        jbcoe::polymorphic_value<Expression> m_condition;
+        jbcoe::polymorphic_value<Statement> m_if_branch;
+        std::optional<jbcoe::polymorphic_value<Statement>> m_opt_else_branch;
+
+    public:
+        IfElse(yy::location loc, jbcoe::polymorphic_value<Expression> condition, jbcoe::polymorphic_value<Statement> if_branch, std::optional<jbcoe::polymorphic_value<Statement>> opt_else_branch);
+        virtual llvm::Value* codegen() const override;
+        virtual std::string str() const override;
+};
+
 class Expression : public Statement {
    public:
     Expression(yy::location loc);
@@ -199,6 +224,7 @@ class FuncDecl : public OuterDecl {
     virtual std::string str() const override;
 
     friend class FuncDef;
+    const structs::FuncProto& prototype() const;
 };
 
 
@@ -224,6 +250,7 @@ class FuncDef : public OuterDecl {
     FuncDef(yy::location loc, FuncDecl prototype, Block body);
     virtual llvm::Function* codegen() const override;
     virtual std::string str() const override;
+    const structs::FuncProto& prototype() const;
 };
 
 class FuncCall : public Expression {

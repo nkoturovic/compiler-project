@@ -36,6 +36,10 @@ void SymbolTable::pop_scope() {
     m_pushed_scopes_indexes.resize(m_pushed_scopes_indexes.size() - 1);
 }
 
+unsigned SymbolTable::num_of_scopes() {
+    return m_scopes.size();
+}
+
 std::optional<structs::TypeValuePair> SymbolTable::get_variable(std::string id) {
     if (m_scopes.size() == 0)
         return {std::nullopt};

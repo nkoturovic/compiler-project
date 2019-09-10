@@ -48,6 +48,7 @@ class SymbolTable {
     void end_scope();
     void push_scope();
     void pop_scope();
+    unsigned num_of_scopes();
     unsigned active_scope_index();
 };
 

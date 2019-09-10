@@ -9,6 +9,7 @@
 #include "llvm/IR/NoFolder.h"
 
 #include <llvm/IR/Type.h>
+#include "llvm/ADT/APInt.h"
 #include <llvm/IR/DerivedTypes.h>
 #include "llvm/IR/Function.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -24,8 +25,8 @@ struct global {
         std::make_unique<llvm::Module>("top", context);
 
     /* TODO: Disable no FOLDER */
-    static inline llvm::IRBuilder<llvm::NoFolder> builder =
-        llvm::IRBuilder<llvm::NoFolder>(context);
+    static inline llvm::IRBuilder<> builder =
+        llvm::IRBuilder<>(context);
 };
 
 llvm::Type* llvm_type(jbcoe::polymorphic_value<lang::types::Type> type);

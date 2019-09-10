@@ -30,6 +30,7 @@ loc.step();
 
 "print" { return yy::parser::make_print_token(loc); }
 "if" { return yy::parser::make_if_token(loc); }
+"else" { return yy::parser::make_else_token(loc); }
 "while" { return yy::parser::make_while_token(loc); }
 "%" { return yy::parser::make_percent_token(loc); }
 "void" { return yy::parser::make_void_kw_token(loc); }
