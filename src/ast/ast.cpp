@@ -50,13 +50,12 @@ IfElse::IfElse(yy::location loc, jbcoe::polymorphic_value<Expression> condition,
 
      llvm::Function *curr_func = codegen::global::builder.GetInsertBlock()->getParent();
 
-     llvm::BasicBlock * if_branch_BB = llvm::BasicBlock::Create(codegen::global::context, "if_branch");
+     llvm::BasicBlock * if_branch_BB = llvm::BasicBlock::Create(codegen::global::context, "if_branch", curr_func);
      llvm::BasicBlock * else_branch_BB = llvm::BasicBlock::Create(codegen::global::context, "else_branch");
      llvm::BasicBlock * merge_BB = llvm::BasicBlock::Create(codegen::global::context, "merge");
-     curr_func->getBasicBlockList().push_back(if_branch_BB);
      codegen::global::builder.CreateCondBr(cond_val, if_branch_BB, else_branch_BB);
      codegen::global::builder.SetInsertPoint(if_branch_BB);
-     llvm::Value * if_br_val = m_if_branch->codegen();
+     m_if_branch->codegen();
 
      codegen::global::builder.CreateBr(merge_BB);
      if_branch_BB = codegen::global::builder.GetInsertBlock();
@@ -80,7 +79,7 @@ IfElse::IfElse(yy::location loc, jbcoe::polymorphic_value<Expression> condition,
 
  std::string IfElse::str() const {
     std::stringstream ss;
-    ss << "ifElse(" << "Condition(" << m_condition->str() << ')'
+    ss << "IfElse(" << "Condition(" << m_condition->str() << ')'
        << "ifBranch(" << m_if_branch->str() << ")";
 
     if (m_opt_else_branch.has_value())
@@ -88,7 +87,61 @@ IfElse::IfElse(yy::location loc, jbcoe::polymorphic_value<Expression> condition,
 
     ss << ')';
     return ss.str();
+}
+
+
+While::While(yy::location loc, jbcoe::polymorphic_value<Expression> condition, jbcoe::polymorphic_value<Statement> body) : Statement(std::move(loc)), m_condition(std::move(condition)), m_body(std::move(body)) {}
+
+
+ llvm::Value* While::codegen() const { 
+     poly_type poly_int_t = poly_type(lang::types::IntType());
+     llvm::Constant * zero_val = llvm::ConstantInt::get(codegen::llvm_type(poly_int_t), 0, true);
+     llvm::Function *curr_func = codegen::global::builder.GetInsertBlock()->getParent();
+
+     llvm::BasicBlock * cond_BB = llvm::BasicBlock::Create(codegen::global::context, "loop_cond", curr_func);
+     llvm::BasicBlock * body_BB = llvm::BasicBlock::Create(codegen::global::context, "loop_body");
+     llvm::BasicBlock * exit_BB = llvm::BasicBlock::Create(codegen::global::context, "loop_exit");
+
+     codegen::global::builder.CreateBr(cond_BB);
+     //curr_func->getBasicBlockList().push_back(cond_BB);
+     codegen::global::builder.SetInsertPoint(cond_BB); 
+
+     structs::TypeValuePair tv_cond_eval = m_condition->evaluate();
+     structs::TypeCodegenFuncPair type_fcdg = semantic::convert(tv_cond_eval, poly_int_t);
+
+     if (type_fcdg.type->id != lang::types::TypeId::INT) {
+         errors.push_back({m_condition->loc, "Invalid condition"});
+         return nullptr;
+     }
+
+     llvm::Value * cmp_val = type_fcdg.codegen_func();
+     llvm::Value * cond_val = codegen::global::builder.CreateICmpNE(cmp_val, zero_val, "condition");
+
+     codegen::global::builder.CreateCondBr(cond_val, body_BB, exit_BB);
+     cond_BB = codegen::global::builder.GetInsertBlock();
+
+     curr_func->getBasicBlockList().push_back(body_BB);
+     codegen::global::builder.SetInsertPoint(body_BB); 
+     m_body->codegen();
+     codegen::global::builder.CreateBr(cond_BB);
+     body_BB = codegen::global::builder.GetInsertBlock();
+
+     curr_func->getBasicBlockList().push_back(exit_BB);
+     codegen::global::builder.SetInsertPoint(exit_BB); 
+
+     return cond_val;
  }
+
+ std::string While::str() const {
+    std::stringstream ss;
+    ss << "While(" << "Condition(" << m_condition->str() << ')'
+       << "Body(" << m_body->str() << ")"
+       << ')';
+
+    return ss.str();
+ }
+
+
 
 
 Expression::Expression(yy::location loc) : Statement(std::move(loc)) {}

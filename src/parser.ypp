@@ -180,6 +180,7 @@ Stmt : Sprt_stmt ";" { $$ = move($1); } /* Stmt that ends with separator  */
      | ";" { } /* TODO: Empty statement */ {}
      | Block { $$ = move($1); }
      | If_else_stmt { $$ = move($1); }
+     | "while" "(" Expr ")" Stmt { $$ = poly_val<ast::Statement>(ast::While(@$, move($3), move($5))); }
      ;
 
 Sprt_stmt : Expr { 

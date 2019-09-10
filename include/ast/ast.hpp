@@ -41,19 +41,6 @@ class Statement : public AstNode {
     virtual llvm::Value* codegen() const = 0;
 };
 
-class If : public Statement {
-    private:
-        jbcoe::polymorphic_value<Expression> m_condition;
-        jbcoe::polymorphic_value<Statement> m_if_branch;
-        std::optional<jbcoe::polymorphic_value<Statement>> m_opt_else_branch;
-
-    public:
-        If(yy::location loc, jbcoe::polymorphic_value<Expression> condition, jbcoe::polymorphic_value<Statement> if_branch, std::optional<jbcoe::polymorphic_value<Statement>> opt_else_branch);
-        virtual llvm::Value* codegen() const override;
-        virtual std::string str() const override;
-};
-
-
 class IfElse : public Statement {
     private:
         jbcoe::polymorphic_value<Expression> m_condition;
@@ -65,6 +52,18 @@ class IfElse : public Statement {
         virtual llvm::Value* codegen() const override;
         virtual std::string str() const override;
 };
+
+class While : public Statement {
+    private:
+        jbcoe::polymorphic_value<Expression> m_condition;
+        jbcoe::polymorphic_value<Statement> m_body;
+
+    public:
+        While(yy::location loc, jbcoe::polymorphic_value<Expression> condition, jbcoe::polymorphic_value<Statement> body);
+        virtual llvm::Value* codegen() const override;
+        virtual std::string str() const override;
+};
+
 
 class Expression : public Statement {
    public:
