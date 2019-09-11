@@ -269,14 +269,13 @@ StringLiteral::StringLiteral(yy::location loc, std::string str)
     : Literal(std::move(loc), poly_type(types::StringType())), m_val(std::move(str)) {}
 
 structs::TypeValuePair StringLiteral::evaluate() const {
-
-    polymorphic_value<lang::types::Type> type = polymorphic_value<lang::types::Type>(lang::types::StringType());
     //llvm::Constant * val = llvm::ConstantDataArray::getString(codegen::global::module->getContext(), m_val, true);
     //llvm::Constant * str_val = llvm::ConstantDataArray::getString(codegen::global::module->getContext(), m_val, true);
 
     //auto v = llvm::GlobalVariable(str_val->getType(), true, llvm::GlobalValue::LinkageTypes::InternalLinkage , str_val);
     //llvm::Use use = v.User::getNumOperands
     //v.addUse(
+    polymorphic_value<lang::types::Type> type = polymorphic_value<lang::types::Type>(lang::types::StringType());
     llvm::Value *str = codegen::global::builder.CreateGlobalStringPtr(m_val);
     return {type, str};
 }
@@ -798,7 +797,12 @@ structs::TypeValuePair FuncCall::evaluate() const {
     }
 
     llvm::FunctionType *ftype = llvm::FunctionType::get(codegen::llvm_type(lpf->proto.retval_t), converted_types, false);
-    return { lpf->proto.retval_t, codegen::global::builder.CreateCall(ftype, lpf->func, converted_args, "call_" + lpf->proto.name) };
+
+    if (lpf->proto.retval_t->id != lang::types::TypeId::VOID) {
+        return { lpf->proto.retval_t, codegen::global::builder.CreateCall(ftype, lpf->func, converted_args, "call_" + lpf->proto.name) };
+    } 
+
+    return { lpf->proto.retval_t, codegen::global::builder.CreateCall(ftype, lpf->func, converted_args) };
 }
 
 std::string FuncCall::str() const {
