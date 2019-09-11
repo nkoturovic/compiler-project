@@ -40,6 +40,18 @@ unsigned SymbolTable::num_of_scopes() {
     return m_scopes.size();
 }
 
+std::optional<structs::TypeValuePair> SymbolTable::get_var_curr_scope_only(std::string id) {
+    if (m_scopes.size() == 0)
+        return {std::nullopt};
+
+    auto it = m_scopes[m_scopes.size()-1].find(id);
+    if (it != m_scopes[m_scopes.size()-1].end())
+            return it->second;
+
+    return {std::nullopt};
+
+}
+
 std::optional<structs::TypeValuePair> SymbolTable::get_variable(std::string id) {
     if (m_scopes.size() == 0)
         return {std::nullopt};
@@ -97,7 +109,7 @@ std::optional<structs::LocProtoFuncTriple> SymbolTable::get_function(std::string
 
 
 void SymbolTable::define_variable(std::string id, structs::TypeValuePair tv) {
-    if (m_scopes.size() == 0 || this->get_variable(id).has_value()) {
+    if (m_scopes.size() == 0 || this->get_var_curr_scope_only(id).has_value()) {
         throw SymbolException("No active scope for defining symbol!");
     } else {
         m_scopes[m_scopes.size()-1].insert(std::pair(id, tv));

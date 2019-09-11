@@ -37,6 +37,7 @@ class SymbolTable {
     public:
 
     std::optional<structs::TypeValuePair> get_variable(std::string id);
+    std::optional<structs::TypeValuePair> get_var_curr_scope_only(std::string id);
     std::optional<structs::LocProtoFuncTriple> get_function(std::string id);
 
     void define_variable(std::string id, structs::TypeValuePair tv);

@@ -38,6 +38,7 @@ stack.hh
 *.exe
 *.out
 *.app
+*.s
 
 # Other
 *.pdf

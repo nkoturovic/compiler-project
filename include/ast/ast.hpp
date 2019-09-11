@@ -62,6 +62,27 @@ class While : public Statement {
         While(yy::location loc, jbcoe::polymorphic_value<Expression> condition, jbcoe::polymorphic_value<Statement> body);
         virtual llvm::Value* codegen() const override;
         virtual std::string str() const override;
+    private:
+        While(yy::location loc);
+
+        friend class For;
+};
+
+
+class For : public Statement {
+    private:
+        jbcoe::polymorphic_value<Statement> m_init_block;
+        While m_while; 
+
+    public:
+    For(yy::location loc, 
+            jbcoe::polymorphic_value<Statement> init_block, 
+            jbcoe::polymorphic_value<Expression> condition, 
+            jbcoe::polymorphic_value<Statement> after_expr,
+            jbcoe::polymorphic_value<Statement> body);
+
+        virtual llvm::Value* codegen() const override;
+        virtual std::string str() const override;
 };
 
 
@@ -200,6 +221,15 @@ class Block : public Statement {
     Block(yy::location loc,
           std::vector<jbcoe::polymorphic_value<Statement>> statements);
     virtual llvm::Value* codegen() const override;
+    virtual std::string str() const override;
+};
+
+
+class Empty : public Expression {
+public:
+    Empty(yy::location loc);
+    virtual jbcoe::polymorphic_value<lang::types::Type> check_type() const override;
+    virtual structs::TypeValuePair evaluate() const override;
     virtual std::string str() const override;
 };
 

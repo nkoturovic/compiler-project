@@ -73,7 +73,6 @@ IfElse::IfElse(yy::location loc, jbcoe::polymorphic_value<Expression> condition,
      curr_func->getBasicBlockList().push_back(merge_BB);
      codegen::global::builder.SetInsertPoint(merge_BB);
 
-
      return cond_val;
  }
 
@@ -92,6 +91,7 @@ IfElse::IfElse(yy::location loc, jbcoe::polymorphic_value<Expression> condition,
 
 While::While(yy::location loc, jbcoe::polymorphic_value<Expression> condition, jbcoe::polymorphic_value<Statement> body) : Statement(std::move(loc)), m_condition(std::move(condition)), m_body(std::move(body)) {}
 
+While::While(yy::location loc) : Statement(loc) {}
 
  llvm::Value* While::codegen() const { 
      poly_type poly_int_t = poly_type(lang::types::IntType());
@@ -136,6 +136,39 @@ While::While(yy::location loc, jbcoe::polymorphic_value<Expression> condition, j
     std::stringstream ss;
     ss << "While(" << "Condition(" << m_condition->str() << ')'
        << "Body(" << m_body->str() << ")"
+       << ')';
+
+    return ss.str();
+ }
+
+
+For::For(yy::location loc, 
+            jbcoe::polymorphic_value<Statement> init_block, 
+            jbcoe::polymorphic_value<Expression> condition, 
+            jbcoe::polymorphic_value<Statement> after_expr,
+            jbcoe::polymorphic_value<Statement> body) 
+                :  Statement(loc), m_init_block(move(init_block)), m_while(loc) {
+
+                    std::vector<jbcoe::polymorphic_value<Statement>> statements;
+                    statements.push_back(std::move(body));
+                    statements.push_back(std::move(after_expr));
+                    m_while = While(loc, std::move(condition), poly_val<ast::Statement>(Block(loc, statements)));
+                }
+
+
+ llvm::Value* For::codegen() const {
+     symbols.begin_scope();
+        m_init_block->codegen();
+        llvm::Value * val = m_while.codegen();
+     symbols.end_scope();
+     return val;
+ }
+
+ std::string For::str() const {
+    std::stringstream ss;
+    ss << "For(" << "Init(" << m_init_block->str() << ')'
+       << "Condition(" << m_while.m_condition->str() << ')'
+       << "Body(" << m_while.m_body->str() << ")"
        << ')';
 
     return ss.str();
@@ -486,6 +519,22 @@ std::string Block::str() const {
     return ss.str();
 }
 
+Empty::Empty(yy::location loc) : Expression(loc) {}
+
+std::string Empty::str() const { return "";}
+
+poly_type Empty::check_type() const {
+    poly_type poly_void = poly_type(lang::types::VoidType());
+    return poly_void;
+}
+
+structs::TypeValuePair Empty::evaluate() const {
+    poly_type poly_void = poly_type(lang::types::VoidType());
+    llvm::Value * vval = llvm::UndefValue::get(llvm::Type::getVoidTy(codegen::global::context));
+    return {poly_void, vval};
+}
+
+
 OuterDecl::OuterDecl(yy::location loc) : AstNode(std::move(loc)) {} 
 
 
@@ -564,6 +613,10 @@ llvm::Function* FuncDef::codegen() const {
         }
 
         m_body.codegen();
+
+        //llvm::Value * null_val = llvm::Constant::getNullValue(codegen::llvm_type(m_prototype.m_prototype.retval_t));
+        //codegen::global::builder.CreateRet(null_val);
+
     symbols.end_scope();
 
     if (symbols.num_of_scopes() > 0)
@@ -700,7 +753,7 @@ VariableDecl::VariableDecl(yy::location loc, poly_type type, std::vector<structs
 llvm::Value* VariableDecl::codegen() const {
     llvm::Value * ai = nullptr;
     for (const auto& [n, opt_e] : m_var_decl_list) {
-        std::optional<structs::TypeValuePair> opt_tv = symbols.get_variable(n);
+        std::optional<structs::TypeValuePair> opt_tv = symbols.get_var_curr_scope_only(n);
         if (opt_tv.has_value()) {
             errors.push_back({this->loc, "Variable " + n + " already defined"});
             return nullptr;

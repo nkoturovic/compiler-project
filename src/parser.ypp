@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <cstdlib>
 #include "../include/third_party/polymorphic_value.h"
 #include "../include/driver.hpp"
 #include "../include/ast/ast.hpp"
@@ -49,6 +50,7 @@ print_token "print"
 if_token "if"          
 else_token "else"
 while_token "while"          
+for_token "for"          
 void_kw_token "void"          
 int_kw_token "int"          
 double_kw_token "double"          
@@ -94,8 +96,8 @@ pipe_token "|"
 %token <string> string_token "String literal";
 
 %type <poly_val<ast::OuterDecl>> Outer_decl Func_def
-%type <poly_val<ast::Statement>> Stmt Sprt_stmt Block If_else_stmt
-%type <poly_val<ast::Expression>> Expr Literal Func_call
+%type <poly_val<ast::Statement>> Stmt Sprt_stmt Block If_else_stmt Opt_sprt_stmt
+%type <poly_val<ast::Expression>> Expr Literal Func_call Opt_expr
 %type <poly_type> Type Basic_type Pointer_type
 %type <vector<poly_val<ast::OuterDecl>>> Seq_of_outer_decl Program
 %type <vector<poly_val<ast::Statement>>> List_of_stmts 
@@ -181,6 +183,7 @@ Stmt : Sprt_stmt ";" { $$ = move($1); } /* Stmt that ends with separator  */
      | Block { $$ = move($1); }
      | If_else_stmt { $$ = move($1); }
      | "while" "(" Expr ")" Stmt { $$ = poly_val<ast::Statement>(ast::While(@$, move($3), move($5))); }
+     | "for" "(" Opt_sprt_stmt ";" Opt_expr ";" Opt_expr ")" Stmt { $$ = poly_val<ast::Statement>(ast::For(@$, move($3), move($5), poly_val<ast::Statement>(move($7)), move($9))); }
      ;
 
 Sprt_stmt : Expr { 
@@ -190,6 +193,10 @@ Sprt_stmt : Expr {
           | Type Variable_decl_list { $$ = poly_val<ast::Statement>(ast::VariableDecl(@$, move($1), move($2))); }
           | "return" Expr { $$ = poly_val<ast::Statement>(ast::ReturnStmt(@$, move($2))); }
 	      ;
+
+Opt_sprt_stmt : Sprt_stmt { $$ = move($1); }
+              | /* eps */ { $$ = poly_val<ast::Statement>(ast::Empty(@$)); }
+              ;
 
 /********** Variable declaration **********/
 Variable_decl_list : Variable_decl_list "," Variable_decl { $$ = $1; $$.push_back(move($3)); }
@@ -244,6 +251,9 @@ Expr : "(" Expr ")" { $$ = move($2); }
      | Literal { $$ = move($1); }
      ;
 
+Opt_expr : Expr { $$ = move($1); }
+               | /* eps */ { $$ = poly_expr(ast::Empty(@$)); }
+
 Literal : char_token { $$ = poly_expr(ast::CharLiteral(@$, $1)); }
         | int_token { $$ = poly_expr(ast::IntLiteral(@$, $1)); }
         | double_token { $$ = poly_expr(ast::DoubleLiteral(@$, $1)); }
@@ -272,50 +282,3 @@ If_else_stmt : "if" "(" Expr ")" Stmt %prec NOELSE { $$ = poly_val<ast::Statemen
 */
 
 %%
-
-
-int main(int argc, char * argv[])
-{
-    bool read_from_file = false;
-    Driver driver;
-    Driver::set_active_instance(driver);
-    
-    int i;
-    for (i = 1; i < argc; i++) {
-        if (argv[i] == string("-p")) {
-            driver.trace_parsing = true;
-        } else if (argv[i] == string("-s")) {
-            driver.trace_scanning = true;
-        } else {
-            read_from_file = true;
-        }
-    }
-
-    if (read_from_file)
-        driver.parse(argv[i-1]);
-    else
-    driver.parse();
-
-    std::vector<structs::Error> ast_errors = ast::AstNode::get_errors();
-    std::vector<structs::Error> ast_warnings = ast::AstNode::get_warnings();
-
-    if (!ast_errors.empty()) {
-        /* Print all errors collected from the Ast */
-        for (const structs::Error& err : ast_errors) {
-            driver.error(err.loc, err.msg);
-        }
-    }
-
-    if (!ast_warnings.empty()) {
-        /* Print all warnigns collected from the Ast */
-        for (const structs::Error& err : ast_warnings) {
-            driver.warning(err.loc, err.msg);
-        }
-    }
-
-    if (ast_errors.empty()) {
-        codegen::global::module->print(llvm::outs(), nullptr);
-    }
-
-	return 0;
-}
