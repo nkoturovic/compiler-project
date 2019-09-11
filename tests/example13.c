@@ -1,9 +1,12 @@
+/* Deklarisemo funkciju printf 
+ * preuzecemo je u fazi linkovanja */
 
-void f() {
-    2 + 3;
-}
+int printf(char * s);
 
 
-int main() {
-    return 1+2;
+int main()
+{
+    printf("Hello world\n");
+
+    return 0;
 }

@@ -53,6 +53,7 @@ struct StrOptExprPair {
     std::optional<jbcoe::polymorphic_value<ast::Expression>> expr;
 };
 
+std::string str_repl_all(std::string str, std::string replace_me, std::string with);
 
 }  // namespace compiler::structs
 

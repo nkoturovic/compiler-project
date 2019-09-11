@@ -3,7 +3,12 @@ int f(int a) {
 }
 
 double g(double a) {
-    return a + a + a;
+    if (a > 10) 
+        return a + a + a;
+    else if (a <= 3)
+        return 2*a;
+
+    return 0;
 }
 
 int main()

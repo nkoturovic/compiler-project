@@ -95,7 +95,7 @@ pipe_token "|"
 %token <char> char_token "Char literal";
 %token <string> string_token "String literal";
 
-%type <poly_val<ast::OuterDecl>> Outer_decl Func_def
+%type <poly_val<ast::OuterDecl>> Outer_decl Func_def Func_decl
 %type <poly_val<ast::Statement>> Stmt Sprt_stmt Block If_else_stmt Opt_sprt_stmt
 %type <poly_val<ast::Expression>> Expr Literal Func_call Opt_expr
 %type <poly_type> Type Basic_type Pointer_type
@@ -154,6 +154,7 @@ Seq_of_outer_decl : Seq_of_outer_decl Outer_decl { $$ = move($1); $$.push_back($
         ;
 
 Outer_decl : Func_def { $$ = move($1); }
+           | Func_decl { $$ = move($1); }
            ;
 
 Func_def : Type id_token "(" List_of_args ")" Block { 
@@ -163,6 +164,8 @@ Func_def : Type id_token "(" List_of_args ")" Block {
          } 
          ;
 
+Func_decl : Type id_token "(" List_of_args ")" ";" {  $$ = poly_val<ast::OuterDecl>(ast::FuncDecl(@$,structs::FuncProto{move($2), move($4), move($1)})); }
+ 
 List_of_args : List_of_args "," Type id_token { $$ = move($1); $$.push_back({move($3), move($4)}); }
              | Type id_token { $$ = std::vector<structs::FuncArg>(); $$.push_back({move($1), move($2)}); }
              | /* eps */ { $$ = std::vector<structs::FuncArg>(); }
@@ -257,7 +260,7 @@ Opt_expr : Expr { $$ = move($1); }
 Literal : char_token { $$ = poly_expr(ast::CharLiteral(@$, $1)); }
         | int_token { $$ = poly_expr(ast::IntLiteral(@$, $1)); }
         | double_token { $$ = poly_expr(ast::DoubleLiteral(@$, $1)); }
-        | string_token { $$ = poly_expr(ast::StringLiteral(@$, $1)); }
+        | string_token { $$ = poly_expr(ast::StringLiteral(@$, move($1))); }
         ;
 
 

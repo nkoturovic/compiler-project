@@ -11,15 +11,16 @@
 #include "../include/parser.tab.hpp"
 
 static yy::location loc;
+
 %}
 
 %{
-
 /* Code run each time pattern is matched */
 #define YY_USER_ACTION loc.columns(yyleng);
 %}
 
 ID [a-zA-Z][a-zA-Z_0-9]*
+%x C_COMMENT
 
 %%
 
@@ -27,6 +28,13 @@ ID [a-zA-Z][a-zA-Z_0-9]*
 /* Code run each time yylex() is called */
 loc.step();
 %}
+
+"//".* {}
+
+
+"/*"                BEGIN(C_COMMENT);
+<C_COMMENT>"*/"     BEGIN(INITIAL);
+<C_COMMENT>.        { }
 
 "print" { return yy::parser::make_print_token(loc); }
 "if" { return yy::parser::make_if_token(loc); }
@@ -88,9 +96,9 @@ loc.step();
 '(\\.|[^'\\])' {
 	   return yy::parser::make_char_token(yytext[1], loc); }
 
-\"(\\.|[^"\\])*\" {
-	   string_view val(yytext); 
-	   return yy::parser::make_string_token(string(val.substr(1, val.length() - 2)), loc); }
+\"([^\\\"]|\\.)*\" { 
+	   std::string val = structs::str_repl_all(yytext, R"(\n)", "\n\n");
+	   return yy::parser::make_string_token(move(string(val.substr(1, val.length() - 2))), loc); }
 
 [\t ] { loc.step(); }
 

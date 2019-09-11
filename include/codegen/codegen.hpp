@@ -15,6 +15,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/Verifier.h"
 
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Scalar.h"
@@ -26,6 +27,8 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/IR/AssemblyAnnotationWriter.h"
 
+#include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/GlobalValue.h"
 
 #include "../lang/types.hpp"
 

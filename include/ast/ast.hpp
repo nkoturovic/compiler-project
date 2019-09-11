@@ -36,9 +36,13 @@ std::ostream& operator<<(std::ostream &out, const AstNode& node);
 
 
 class Statement : public AstNode {
+    protected:
+    bool p_is_terminator = false;
+
    public:
     Statement(yy::location loc);
     virtual llvm::Value* codegen() const = 0;
+    bool is_terminator() const;
 };
 
 class IfElse : public Statement {
@@ -222,8 +226,8 @@ class Block : public Statement {
           std::vector<jbcoe::polymorphic_value<Statement>> statements);
     virtual llvm::Value* codegen() const override;
     virtual std::string str() const override;
+    std::optional<jbcoe::polymorphic_value<Statement>> get_last_statement() const;
 };
-
 
 class Empty : public Expression {
 public:
@@ -241,7 +245,6 @@ class OuterDecl : public AstNode {
     virtual std::string str() const = 0;
 };
 
-
 class FuncDecl : public OuterDecl {
   private:
     compiler::structs::FuncProto m_prototype;
@@ -256,8 +259,12 @@ class FuncDecl : public OuterDecl {
     const structs::FuncProto& prototype() const;
 };
 
+class Terminator : public Statement {
+    public:
+    Terminator(yy::location loc);
+};
 
-class ReturnStmt : public Statement {
+class ReturnStmt : public Terminator {
 public:
     ReturnStmt(yy::location loc, jbcoe::polymorphic_value<Expression> expr);
     virtual llvm::Value* codegen() const override;
@@ -265,7 +272,6 @@ public:
 private:
     jbcoe::polymorphic_value<Expression> m_expr;
 };
-
 
 class FuncDef : public OuterDecl {
    private:

@@ -28,7 +28,16 @@ std::ostream& operator<<(std::ostream &out, const AstNode& node) {
     return out << node.str();
 }
 
-Statement::Statement(yy::location loc) : AstNode(std::move(loc)) {}
+Statement::Statement(yy::location loc) : AstNode(std::move(loc)) {
+    Terminator * term = dynamic_cast<Terminator*>(this);
+    if (term) {
+        this->p_is_terminator = true;
+    }
+}
+
+bool Statement::is_terminator() const {
+    return p_is_terminator;
+}
 
 IfElse::IfElse(yy::location loc, jbcoe::polymorphic_value<Expression> condition, jbcoe::polymorphic_value<Statement> if_branch, std::optional<jbcoe::polymorphic_value<Statement>> opt_else_branch) : Statement(std::move(loc)), m_condition(std::move(condition)), m_if_branch(std::move(if_branch)), m_opt_else_branch(std::move(opt_else_branch)) { }
 
@@ -53,22 +62,31 @@ IfElse::IfElse(yy::location loc, jbcoe::polymorphic_value<Expression> condition,
      llvm::BasicBlock * if_branch_BB = llvm::BasicBlock::Create(codegen::global::context, "if_branch", curr_func);
      llvm::BasicBlock * else_branch_BB = llvm::BasicBlock::Create(codegen::global::context, "else_branch");
      llvm::BasicBlock * merge_BB = llvm::BasicBlock::Create(codegen::global::context, "merge");
-     codegen::global::builder.CreateCondBr(cond_val, if_branch_BB, else_branch_BB);
+
+    if (!m_opt_else_branch.has_value()) {
+         codegen::global::builder.CreateCondBr(cond_val, if_branch_BB, merge_BB);
+    } else {
+         codegen::global::builder.CreateCondBr(cond_val, if_branch_BB, else_branch_BB);
+    }
+
      codegen::global::builder.SetInsertPoint(if_branch_BB);
      m_if_branch->codegen();
 
-     codegen::global::builder.CreateBr(merge_BB);
+     if (!m_if_branch->is_terminator())
+         codegen::global::builder.CreateBr(merge_BB);
+
      if_branch_BB = codegen::global::builder.GetInsertBlock();
 
-     curr_func->getBasicBlockList().push_back(else_branch_BB);
-     codegen::global::builder.SetInsertPoint(else_branch_BB);
-
      llvm::Value * else_br_val = nullptr;
-     if (m_opt_else_branch.has_value())
-        else_br_val = m_opt_else_branch.value()->codegen();
-
-     codegen::global::builder.CreateBr(merge_BB);
-     else_branch_BB = codegen::global::builder.GetInsertBlock();
+     if (m_opt_else_branch.has_value()) {
+         curr_func->getBasicBlockList().push_back(else_branch_BB);
+         codegen::global::builder.SetInsertPoint(else_branch_BB);
+         else_br_val = m_opt_else_branch.value()->codegen();
+         if (!m_opt_else_branch.value()->is_terminator()) {
+             else_branch_BB = codegen::global::builder.GetInsertBlock();
+             codegen::global::builder.CreateBr(merge_BB);
+         }
+     }
 
      curr_func->getBasicBlockList().push_back(merge_BB);
      codegen::global::builder.SetInsertPoint(merge_BB);
@@ -123,9 +141,11 @@ While::While(yy::location loc) : Statement(loc) {}
      curr_func->getBasicBlockList().push_back(body_BB);
      codegen::global::builder.SetInsertPoint(body_BB); 
      m_body->codegen();
-     codegen::global::builder.CreateBr(cond_BB);
-     body_BB = codegen::global::builder.GetInsertBlock();
+     if (!m_body->is_terminator()) {
+         codegen::global::builder.CreateBr(cond_BB);
+     }
 
+     body_BB = codegen::global::builder.GetInsertBlock();
      curr_func->getBasicBlockList().push_back(exit_BB);
      codegen::global::builder.SetInsertPoint(exit_BB); 
 
@@ -249,9 +269,16 @@ StringLiteral::StringLiteral(yy::location loc, std::string str)
     : Literal(std::move(loc), poly_type(types::StringType())), m_val(std::move(str)) {}
 
 structs::TypeValuePair StringLiteral::evaluate() const {
+
     polymorphic_value<lang::types::Type> type = polymorphic_value<lang::types::Type>(lang::types::StringType());
-    llvm::Constant * val = llvm::ConstantDataArray::getString(codegen::global::module->getContext(), m_val, true);
-    return {type, val};
+    //llvm::Constant * val = llvm::ConstantDataArray::getString(codegen::global::module->getContext(), m_val, true);
+    //llvm::Constant * str_val = llvm::ConstantDataArray::getString(codegen::global::module->getContext(), m_val, true);
+
+    //auto v = llvm::GlobalVariable(str_val->getType(), true, llvm::GlobalValue::LinkageTypes::InternalLinkage , str_val);
+    //llvm::Use use = v.User::getNumOperands
+    //v.addUse(
+    llvm::Value *str = codegen::global::builder.CreateGlobalStringPtr(m_val);
+    return {type, str};
 }
 
 std::string StringLiteral::StringLiteral::str() const {
@@ -497,7 +524,16 @@ std::string UnOp::str() const {
 
 Block::Block(yy::location loc,
              std::vector<jbcoe::polymorphic_value<Statement>> statements)
-    : Statement(std::move(loc)), m_statements(std::move(statements)) {}
+    : Statement(std::move(loc)), m_statements(std::move(statements)) {
+
+        for (unsigned i=0; i < m_statements.size(); i++) {
+            if (m_statements[i]->is_terminator()) {
+                m_statements.resize(i + 1);
+                this->p_is_terminator = true;
+                return;
+            }
+        }
+    }
 
 
 llvm::Value* Block::codegen() const {
@@ -517,6 +553,15 @@ std::string Block::str() const {
     ss << ')';
 
     return ss.str();
+}
+
+
+std::optional<jbcoe::polymorphic_value<Statement>> Block::get_last_statement() const {
+    if (m_statements.size() == 0) {
+        return {std::nullopt};
+    } else {
+        return m_statements[m_statements.size()-1];
+    }
 }
 
 Empty::Empty(yy::location loc) : Expression(loc) {}
@@ -614,15 +659,36 @@ llvm::Function* FuncDef::codegen() const {
 
         m_body.codegen();
 
-        //llvm::Value * null_val = llvm::Constant::getNullValue(codegen::llvm_type(m_prototype.m_prototype.retval_t));
-        //codegen::global::builder.CreateRet(null_val);
+        auto last_statement = m_body.get_last_statement();
+        if (last_statement.has_value()) {
+            Terminator * term = dynamic_cast<Terminator*>(&**last_statement);
+
+            // if not terminator, add it
+            if (!term) {
+                if (m_prototype.m_prototype.retval_t->id == lang::types::TypeId::VOID) {
+                    codegen::global::builder.CreateRet(nullptr);
+                } else {
+                    llvm::Value * naval = llvm::UndefValue::get(codegen::llvm_type(m_prototype.m_prototype.retval_t));
+                    codegen::global::builder.CreateRet(naval);
+                }
+            }
+        }
 
     symbols.end_scope();
 
     if (symbols.num_of_scopes() > 0)
         symbols.pop_scope();
 
-  return func;
+    if (AstNode::get_errors().empty() && func != nullptr) {
+        if (llvm::verifyFunction(*func, &llvm::errs()) == false) {
+            codegen::global::fpass_manager->run(*func);
+        } else {
+            codegen::global::module->print(llvm::outs(), nullptr);
+            AstNode::errors.push_back({ this->loc, "Function not valid"});
+        }
+    }
+
+    return func;
 }
 
 structs::FuncProto FuncDef::current_codegen_proto() {
@@ -646,9 +712,10 @@ std::string FuncDef::str() const {
     return ss.str();
 }
 
+Terminator::Terminator(yy::location loc) : Statement(loc) {}
 
 ReturnStmt::ReturnStmt(yy::location loc, jbcoe::polymorphic_value<Expression> expr)
-    : Statement(std::move(loc)), m_expr(std::move(expr)) { }
+    : Terminator(std::move(loc)), m_expr(std::move(expr)) { p_is_terminator = true; }
 
 llvm::Value* ReturnStmt::codegen() const {
     polymorphic_value<lang::types::Type> return_type = FuncDef::current_codegen_proto().retval_t;
@@ -761,7 +828,7 @@ llvm::Value* VariableDecl::codegen() const {
             ai = codegen::global::builder.CreateAlloca(codegen::llvm_type(m_type), 0, n);
             if (opt_e.has_value()) {
                 structs::TypeCodegenFuncPair type_cdg = semantic::convert(opt_e.value()->evaluate(), m_type);
-                codegen::global::builder.CreateStore(type_cdg.codegen_func(), ai, true);
+                codegen::global::builder.CreateStore(type_cdg.codegen_func(), ai);
                 if (type_cdg.type->id == lang::types::TypeId::INVALID) {
                     errors.push_back({this->loc, "Invalid type of expression "});
                     return nullptr;
@@ -824,7 +891,7 @@ structs::TypeValuePair VariableAssign::evaluate() const {
          return {invalid_type, nullptr};
     }
 
-    codegen::global::builder.CreateStore(t_cdg.codegen_func(), opt_tv->value, true);
+    codegen::global::builder.CreateStore(t_cdg.codegen_func(), opt_tv->value);
 
     return {tc, opt_tv->value};
 }

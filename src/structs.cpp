@@ -24,4 +24,18 @@ bool operator!=(const FuncProto &fp1, const FuncProto &fp2) {
     return !(fp1 == fp2);
 }
 
+
+std::string str_repl_all(std::string str, std::string replace_me, std::string with) {
+    size_t index = 0;
+    while (true) {
+         /* Locate the substring to replace. */
+         index = str.find(replace_me, index);
+         if (index == std::string::npos) break;
+
+         /* Make the replacement. */
+         str.replace(index, 3, with);
+    }
+    return str;
+}
+
 }
