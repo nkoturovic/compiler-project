@@ -17,9 +17,8 @@ int main()
     int sum = 0;
     for (int i = 0; i < 10; i=i+1) { 
         for (int j = 0; j < 10; j=j+1)
-        sum = sum + 1;
-        ispisi_broj(i);
-        puts(" ");
+            sum = sum + 1;
+        printf("%d. iteracija\n", i);
     }
 
     int n;

@@ -1,10 +1,10 @@
-# Compiler project
+# Compiler project (C -> LLVM)
 
 ## Primer
 
-Sledeći primer otprilike ilustruje trenutne mogućnosti kompilatora, dosta stvari je u fazi razvoja i kompilator razume neke
-koncepte (koje podrzava delimicno) ali ne u potpunosti.
+Sledeći primer otprilike ilustruje trenutne mogućnosti kompilatora, dosta stvari je u fazi razvoja.
 
+**Ulazni program:**
 ```c
 /* Deklarisemo eksterne funkcije */
 int printf(char * s, int num);
@@ -25,9 +25,8 @@ int main()
     int sum = 0;
     for (int i = 0; i < 10; i=i+1) { 
         for (int j = 0; j < 10; j=j+1)
-        sum = sum + 1;
-        ispisi_broj(i);
-        puts(" ");
+            sum = sum + 1;
+        printf("%d. iteracija\n", i);
     }
 
     int n;
@@ -51,6 +50,19 @@ int main()
 
     return sum;
 }
+```
+```
+0. iteracija
+1. iteracija
+2. iteracija
+3. iteracija
+4. iteracija
+5. iteracija
+6. iteracija
+7. iteracija
+8. iteracija
+9. iteracija
+Suma iznosi 100
 ```
 
 # Projekat je struktuiran na sledeći način:
