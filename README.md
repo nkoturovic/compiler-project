@@ -4,7 +4,7 @@
 
 Sledeći primer otprilike ilustruje trenutne mogućnosti kompilatora, dosta stvari je u fazi razvoja.
 
-**Ulazni program:**
+**Primer programa:**
 ```c
 /* Deklarisemo eksterne funkcije */
 int printf(char * s, int num);
