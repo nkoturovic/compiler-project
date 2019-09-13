@@ -1,0 +1,33 @@
+/* function declarations */
+int getchar();
+int printf(char * s, int num);
+int puts(char *s);
+int getpid();
+int rand();
+void srand(int seed);
+
+int main()
+{
+
+    // 0 (umesto NULL pointer-a)
+    srand(getpid());
+    int num = rand() % 10; // [0, 9]
+    puts("Zamisljen je broj u segmentu [0, 9].");
+    puts("Pogodi ga!");
+
+    { // blok ogranicava zivotni vek
+        int guess = -1;
+        while (guess != num) {
+            puts("Unesite broj: ");
+            guess = getchar();
+            getchar(); // kupi '\n'
+            guess = guess - '0'; // ASCII to INT
+            if (guess != num)
+                puts("Pogresili ste!");
+        }
+    }
+
+    printf("Cestitamo, zamisljeni broj je %d\n", num);
+
+    return 0;
+}

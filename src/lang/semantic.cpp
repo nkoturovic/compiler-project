@@ -70,7 +70,6 @@ jbcoe::polymorphic_value<Type> binop_check(
         return max_t;
     }
 
-
     return poly_type(InvalidType());
 }
 
@@ -93,15 +92,15 @@ structs::TypeCodegenFuncPair convert(const structs::TypeValuePair &type_value_pa
     poly_type invalid_type = poly_type(lang::types::InvalidType());
 
     if (to_type->id == lang::types::TypeId::DOUBLE && type_value_pair.type->id <= lang::types::TypeId::INT) {
-
         if (retval != nullptr)
             retval = codegen::global::builder.CreateSIToFP(retval, codegen::llvm_type(to_type), "sitofp");
 
     } else if (to_type->id <= lang::types::TypeId::INT && type_value_pair.type->id == lang::types::TypeId::DOUBLE) {
-
         if (retval != nullptr)
             retval = codegen::global::builder.CreateFPToSI(retval, codegen::llvm_type(to_type), "fptosi");
 
+    } else if (to_type->id == lang::types::TypeId::INT && type_value_pair.type->id <= lang::types::TypeId::INT) {
+            retval = codegen::global::builder.CreateIntCast(retval, codegen::llvm_type(poly_type(lang::types::IntType())), true);
     } else if (to_type->id == lang::types::TypeId::PTR && type_value_pair.type->id == lang::types::TypeId::PTR) {
         ret_type = invalid_type; retval = nullptr;
     } else {

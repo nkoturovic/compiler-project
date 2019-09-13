@@ -376,8 +376,12 @@ structs::TypeValuePair BinOp::evaluate() const {
      if (result_type->id <= lang::types::TypeId::INT) {
         if (lhs_tv.type->id == lang::types::TypeId::DOUBLE) 
              lhs_value = codegen::global::builder.CreateFPToSI(lhs_tv.value, codegen::llvm_type(result_type), "fptosi");
-        if (rhs_tv.type->id <= lang::types::TypeId::DOUBLE) 
+        if (rhs_tv.type->id == lang::types::TypeId::DOUBLE) 
              rhs_value = codegen::global::builder.CreateFPToSI(rhs_tv.value, codegen::llvm_type(result_type), "fptosi");
+        if (lhs_tv.type->id < lang::types::TypeId::INT) 
+             lhs_value = codegen::global::builder.CreateIntCast(lhs_value, codegen::llvm_type(poly_type(lang::types::IntType())), true, "toint");
+        if (rhs_tv.type->id < lang::types::TypeId::INT) 
+             rhs_value = codegen::global::builder.CreateIntCast(rhs_value, codegen::llvm_type(poly_type(lang::types::IntType())), true, "toint");
 
          switch(m_op_id) {
              case lang::operators::BinOpId::PLUS :
@@ -391,6 +395,9 @@ structs::TypeValuePair BinOp::evaluate() const {
                  break;
             case lang::operators::BinOpId::DIV :
                  result_value = codegen::global::builder.CreateSDiv(lhs_value, rhs_value, "idiv");
+                 break;
+            case lang::operators::BinOpId::MOD :
+                 result_value = codegen::global::builder.CreateSRem(lhs_value, rhs_value, "irem");
                  break;
             case lang::operators::BinOpId::EQ :
                  result_value = codegen::global::builder.CreateICmpEQ(lhs_value, rhs_value, "ieq");
@@ -439,6 +446,10 @@ structs::TypeValuePair BinOp::evaluate() const {
                  break;
             case lang::operators::BinOpId::DIV :
                  result_value = codegen::global::builder.CreateFDiv(lhs_value, rhs_value, "fdiv");
+                 break;
+            case lang::operators::BinOpId::MOD :
+                 result_value = nullptr;
+                 errors.push_back({this->loc, "Reminder can only be used for integer based types"});
                  break;
             case lang::operators::BinOpId::EQ :
                  result_value = codegen::global::builder.CreateFCmpUEQ(lhs_value, rhs_value, "feq");
