@@ -146,8 +146,8 @@ Program : Seq_of_outer_decl eof_token {
             for (const poly_val<ast::OuterDecl> &pval_decl : $$) {
                 pval_decl->codegen();
             }
-
         }
+        | eof_token { $$ = {}; }
         ;
 
 Seq_of_outer_decl : Seq_of_outer_decl Outer_decl { $$ = move($1); $$.push_back($2); }

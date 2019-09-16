@@ -79,19 +79,19 @@ loc.step();
 "!" { return yy::parser::make_excl_token(loc); }
 "~" { return yy::parser::make_tilde_token(loc); }
 
-[+-]?(0|([1-9][0-9]*)) { int val = strtol(yytext, nullptr, 10);
+0|([1-9][0-9]*) { int val = strtol(yytext, nullptr, 10);
 	      return yy::parser::make_int_token(val, loc); }
 
-[+-]?"0b"[0-1]+ { int val = strtol(&yytext[2], nullptr, 2);
+"0b"[0-1]+ { int val = strtol(&yytext[2], nullptr, 2);
 	           return yy::parser::make_int_token(val, loc); }
 
-[+-]?"0"[0-7]+ { long val = strtol(&yytext[1], nullptr, 8);
+"0"[0-7]+ { long val = strtol(&yytext[1], nullptr, 8);
 	    return yy::parser::make_int_token(val, loc); }
 
-[+-]?"0x"[0-9a-fA-F]+ { int val = strtol(&yytext[2], nullptr, 16);
+"0x"[0-9a-fA-F]+ { int val = strtol(&yytext[2], nullptr, 16);
 	           return yy::parser::make_int_token(val, loc); }
 
-[+-]?[0-9]*"."[0-9]+ { double val = strtod(yytext, nullptr); 
+[0-9]*"."[0-9]+ { double val = strtod(yytext, nullptr); 
 	          return yy::parser::make_double_token(val, loc); }
 
 '(\\.|[^'\\])' {
@@ -108,6 +108,8 @@ loc.step();
 . { throw yy::parser::syntax_error(loc,
 		"Lexical error, invalid character: " + string(yytext)); }
 
-<<EOF>>	{ return yy::parser::make_eof_token(loc); }
+<<EOF>>	{ 
+    return yy::parser::make_eof_token(loc); 
+}
 
 %%

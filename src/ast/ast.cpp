@@ -48,7 +48,8 @@ IfElse::IfElse(yy::location loc, jbcoe::polymorphic_value<Expression> condition,
      structs::TypeCodegenFuncPair type_fcdg = semantic::convert(tv_cond_eval, poly_int_t);
 
      if (type_fcdg.type->id != lang::types::TypeId::INT) {
-         errors.push_back({m_condition->loc, "Invalid condition"});
+         if (errors.empty())
+             errors.push_back({m_condition->loc, "Invalid condition"});
          return nullptr;
      }
 
@@ -328,6 +329,13 @@ BinOp::BinOp(yy::location loc, operators::BinOpId op_id,
       m_rhs(std::move(rhs)) {}
 
 polymorphic_value<types::Type> BinOp::check_type() const {
+     auto add_bop_err = [&](poly_type lhs_t, poly_type rhs_t) { std::stringstream err_msg_ss;
+        err_msg_ss << "Invalid operands to BinOp "
+                   << operators::BinOpInfo::binop_id_to_string(m_op_id) << " ("
+                   << lhs_t->str() << "," << rhs_t->str() << ")";
+            AstNode::errors.push_back(structs::Error{this->loc, err_msg_ss.str()});
+     };
+
     const polymorphic_value<types::Type>&lhs_type = m_lhs->check_type(),
           &rhs_type = m_rhs->check_type();
 
@@ -340,49 +348,51 @@ polymorphic_value<types::Type> BinOp::check_type() const {
     polymorphic_value<types::Type> res =
         semantic::binop_check(m_op_id, lhs_type, rhs_type);
 
+    if (res->id == types::TypeId::INVALID)
+        add_bop_err(lhs_type, rhs_type);
+
     return res;
 }
 
 structs::TypeValuePair BinOp::evaluate() const {
 
-     structs::TypeValuePair lhs_tv = m_lhs->evaluate();
-     structs::TypeValuePair rhs_tv = m_rhs->evaluate();
-
      auto invalid_type = lang::types::InvalidType();
 
-     if (lhs_tv.type->id == invalid_type.id || 
-         rhs_tv.type->id == invalid_type.id ||
-         lhs_tv.value == nullptr ||
-         rhs_tv.value == nullptr) {
-         //AstNode::errors.push_back(structs::Error{this->loc, "Unable to evaluate expression"});
-         return {polymorphic_value<lang::types::Type>(invalid_type), nullptr};
-     }
 
-     polymorphic_value<lang::types::Type> result_type = this->check_type();
+    polymorphic_value<lang::types::Type> result_type = this->check_type();
 
     if (result_type->id == invalid_type.id) {
-        std::stringstream err_msg_ss;
-        err_msg_ss << "Invalid operands to BinOp"
-                   << operators::BinOpInfo::binop_id_to_string(m_op_id) << "("
-                   << lhs_tv.type->str() << "," << rhs_tv.type->str() << ")";
-        AstNode::errors.push_back(structs::Error{this->loc, err_msg_ss.str()});
         return {polymorphic_value<lang::types::Type>(invalid_type), nullptr};
     }
 
-     // TODO EXPAND
-     llvm::Value * lhs_value = lhs_tv.value;
-     llvm::Value * rhs_value = rhs_tv.value;
-     llvm::Value * result_value = nullptr;
-     if (result_type->id <= lang::types::TypeId::INT) {
-        if (lhs_tv.type->id == lang::types::TypeId::DOUBLE) 
-             lhs_value = codegen::global::builder.CreateFPToSI(lhs_tv.value, codegen::llvm_type(result_type), "fptosi");
-        if (rhs_tv.type->id == lang::types::TypeId::DOUBLE) 
-             rhs_value = codegen::global::builder.CreateFPToSI(rhs_tv.value, codegen::llvm_type(result_type), "fptosi");
-        if (lhs_tv.type->id < lang::types::TypeId::INT) 
-             lhs_value = codegen::global::builder.CreateIntCast(lhs_value, codegen::llvm_type(poly_type(lang::types::IntType())), true, "toint");
-        if (rhs_tv.type->id < lang::types::TypeId::INT) 
-             rhs_value = codegen::global::builder.CreateIntCast(rhs_value, codegen::llvm_type(poly_type(lang::types::IntType())), true, "toint");
+    structs::TypeValuePair lhs_tv = m_lhs->evaluate();
+    structs::TypeValuePair rhs_tv = m_rhs->evaluate();
 
+    if (lhs_tv.type->id == invalid_type.id || 
+        rhs_tv.type->id == invalid_type.id || 
+        lhs_tv.value == nullptr ||  
+        rhs_tv.value == nullptr) {
+        return {polymorphic_value<lang::types::Type>(invalid_type), nullptr};
+    }
+
+
+     // TODO EXPAND
+     // Must succeed since type check succeded!
+     //
+     
+     llvm::Value * lhs_value = nullptr;
+     llvm::Value * rhs_value = nullptr;
+     llvm::Value * result_value = nullptr;
+
+     poly_type impl_type = semantic::get_implicit_type(lhs_tv.type, rhs_tv.type);
+
+     structs::TypeCodegenFuncPair lhs_tcdg = semantic::convert(lhs_tv, impl_type);
+     structs::TypeCodegenFuncPair rhs_tcdg = semantic::convert(rhs_tv, impl_type);
+     lhs_value = lhs_tcdg.codegen_func();
+     rhs_value = rhs_tcdg.codegen_func();
+     result_value = nullptr;
+
+     if (impl_type->id <= lang::types::TypeId::INT) {
          switch(m_op_id) {
              case lang::operators::BinOpId::PLUS :
                  result_value = codegen::global::builder.CreateAdd(lhs_value, rhs_value, "iadd");
@@ -423,16 +433,46 @@ structs::TypeValuePair BinOp::evaluate() const {
                  result_value = codegen::global::builder.CreateICmpSGE(lhs_value, rhs_value, "igeq");
                  result_value = codegen::global::builder.CreateIntCast(result_value, codegen::llvm_type(result_type), 1, "i1toi32");
                  break;
-           
+            case lang::operators::BinOpId::L_AND:
+                 lhs_value = codegen::global::builder.CreateICmpNE(lhs_value, 
+                         llvm::ConstantInt::get(codegen::llvm_type(poly_type(lang::types::IntType())), 0, true), "ineq");
+
+                 rhs_value = codegen::global::builder.CreateICmpNE(rhs_value, 
+                         llvm::ConstantInt::get(codegen::llvm_type(poly_type(lang::types::IntType())), 0, true), "ineq");
+
+                 result_value = codegen::global::builder.CreateAnd(lhs_value, rhs_value, "land");
+                 result_value = codegen::global::builder.CreateIntCast(result_value, codegen::llvm_type(result_type), 0, "i1toi32");
+                 break;
+            case lang::operators::BinOpId::L_OR:
+                 lhs_value = codegen::global::builder.CreateICmpNE(lhs_value, 
+                         llvm::ConstantInt::get(codegen::llvm_type(poly_type(lang::types::IntType())), 0, true), "ineq");
+
+                 rhs_value = codegen::global::builder.CreateICmpNE(rhs_value, 
+                         llvm::ConstantInt::get(codegen::llvm_type(poly_type(lang::types::IntType())), 0, true), "ineq");
+
+                 result_value = codegen::global::builder.CreateOr(lhs_value, rhs_value, "lor");
+                 result_value = codegen::global::builder.CreateIntCast(result_value, codegen::llvm_type(result_type), 0, "i1toi32");
+                 break;
+
+            case lang::operators::BinOpId::B_AND:
+                 result_value = codegen::global::builder.CreateAnd(lhs_value, rhs_value, "band");
+                 break;
+            case lang::operators::BinOpId::B_OR:
+                 result_value = codegen::global::builder.CreateOr(lhs_value, rhs_value, "bor");
+                 break;
+            case lang::operators::BinOpId::B_XOR:
+                 result_value = codegen::global::builder.CreateXor(lhs_value, rhs_value, "xor");
+                 break;
+            case lang::operators::BinOpId::SHL :
+                 result_value = codegen::global::builder.CreateShl(lhs_value, rhs_value, "shl");
+                 break;
+            case lang::operators::BinOpId::SHR :
+                 result_value = codegen::global::builder.CreateAShr(lhs_value, rhs_value, "shr");
+                 break;
             default:
                  result_value = nullptr;
          }
-     } else if (result_type->id == lang::types::TypeId::DOUBLE) {
-
-         if (lhs_tv.type->id <= lang::types::TypeId::INT) 
-              lhs_value = codegen::global::builder.CreateSIToFP(lhs_tv.value, codegen::llvm_type(result_type), "sitofp");
-         if (rhs_tv.type->id <= lang::types::TypeId::INT) 
-              rhs_value = codegen::global::builder.CreateSIToFP(rhs_tv.value, codegen::llvm_type(result_type), "sitofp");
+     } else if (impl_type->id == lang::types::TypeId::DOUBLE) {
 
          switch(m_op_id) {
              case lang::operators::BinOpId::PLUS :
@@ -475,11 +515,42 @@ structs::TypeValuePair BinOp::evaluate() const {
                  result_value = codegen::global::builder.CreateFCmpUGE(lhs_value, rhs_value, "fgeq");
                  result_value = codegen::global::builder.CreateIntCast(result_value, codegen::llvm_type(result_type), 1, "i1toi32");
                  break;
+            case lang::operators::BinOpId::L_AND:
+                 lhs_value = codegen::global::builder.CreateFCmpUNE(lhs_value, 
+                         llvm::ConstantFP::get(codegen::llvm_type(poly_type(lang::types::DoubleType())), 0), "fneq");
+
+                 rhs_value = codegen::global::builder.CreateFCmpUNE(rhs_value, 
+                         llvm::ConstantFP::get(codegen::llvm_type(poly_type(lang::types::DoubleType())), 0), "fneq");
+
+                 result_value = codegen::global::builder.CreateAnd(lhs_value, rhs_value, "land");
+                 result_value = codegen::global::builder.CreateIntCast(result_value, codegen::llvm_type(result_type), 0, "i1toi32");
+                 break;
+            case lang::operators::BinOpId::L_OR:
+                 lhs_value = codegen::global::builder.CreateFCmpUNE(lhs_value, 
+                         llvm::ConstantFP::get(codegen::llvm_type(poly_type(lang::types::DoubleType())), 0), "fneq");
+
+                 rhs_value = codegen::global::builder.CreateFCmpUNE(rhs_value, 
+                         llvm::ConstantFP::get(codegen::llvm_type(poly_type(lang::types::DoubleType())), 0), "fneq");
+
+                 result_value = codegen::global::builder.CreateOr(lhs_value, rhs_value, "lor");
+                 result_value = codegen::global::builder.CreateIntCast(result_value, codegen::llvm_type(result_type), 0, "i1toi32");
+                break;
 
            default:
                  result_value = nullptr;
          }
+     } else if (impl_type->id == lang::types::TypeId::PTR) {
+         /* TODO */
+         switch (this->m_op_id) {
+           // case lang::operators::BinOpId::PLUS :
+           //      break;
+           // case lang::operators::BinOpId::MINUS :
+           //      break;
+             default:
+                result_value = nullptr;
+         }
      }
+
     return {result_type, result_value};
 }
 
@@ -509,7 +580,7 @@ polymorphic_value<types::Type> UnOp::check_type() const {
 
     if (res->id == types::TypeId::INVALID) {
         std::stringstream err_msg_ss;
-        err_msg_ss << "Invalid operands to UnOp "
+        err_msg_ss << "Invalid operand to UnOp "
                    << operators::UnOpInfo::unop_id_to_string(m_op_id) << " ("
                    << expr_type->str() << ")";
         AstNode::errors.push_back(structs::Error{loc, err_msg_ss.str()});
@@ -519,8 +590,75 @@ polymorphic_value<types::Type> UnOp::check_type() const {
 }
 
 structs::TypeValuePair UnOp::evaluate() const {
-    /* TODO */
-    return { poly_type(lang::types::InvalidType()), nullptr };
+
+     structs::TypeValuePair expr_tv = m_expr->evaluate();
+
+     auto invalid_type = lang::types::InvalidType();
+
+     if (expr_tv.type->id == invalid_type.id || expr_tv.value == nullptr)
+         return {polymorphic_value<lang::types::Type>(invalid_type), nullptr};
+
+     polymorphic_value<lang::types::Type> result_type = this->check_type();
+
+    if (result_type->id == invalid_type.id) {
+        return {polymorphic_value<lang::types::Type>(invalid_type), nullptr};
+    }
+
+     // TODO EXPAND
+     // Must succeed since type check succeded!
+     structs::TypeCodegenFuncPair tcdg = semantic::convert(expr_tv, result_type);
+     llvm::Value * value = tcdg.codegen_func();
+     llvm::Value * result_value = nullptr;
+
+     if (result_type->id <= lang::types::TypeId::INT) {
+
+         switch(m_op_id) {
+             case operators::UnOpId::PLUS :
+                 result_value = value;
+                 break; // do nothing
+             case operators::UnOpId::MINUS :
+                 result_value = codegen::global::builder.CreateSub(llvm::ConstantInt::get(codegen::llvm_type(tcdg.type), 0, 1), value); 
+                 break;
+             case operators::UnOpId::L_NOT :
+                 result_value = codegen::global::builder.CreateICmpNE(value, 
+                     llvm::ConstantInt::get(codegen::llvm_type(poly_type(lang::types::IntType())), 0, true), "ineq");
+              
+                 result_value = codegen::global::builder.CreateNot(result_value, "lnot"); 
+                 result_value = codegen::global::builder.CreateIntCast(result_value, llvm::Type::getInt1Ty(codegen::global::context), 1,"i32toi1");
+                 result_value = codegen::global::builder.CreateIntCast(result_value, codegen::llvm_type(result_type), 1, "i1toi32");
+                 break;
+             case operators::UnOpId::B_NOT :
+                 result_value = codegen::global::builder.CreateNot(value, "bnot"); 
+                 break;
+             default :
+                 result_value = nullptr;
+         }
+
+     } else if (result_type->id == lang::types::TypeId::DOUBLE) {
+
+         switch(m_op_id) {
+
+             case operators::UnOpId::PLUS :
+                 result_value = value;
+                 break; // do nothing
+             case operators::UnOpId::MINUS :
+                 result_value = codegen::global::builder.CreateFSub(llvm::ConstantFP::get(codegen::llvm_type(tcdg.type), 0), value); 
+                 break;
+             case operators::UnOpId::L_NOT :
+                 result_value = codegen::global::builder.CreateFCmpUNE(value, 
+                     llvm::ConstantFP::get(codegen::llvm_type(poly_type(lang::types::DoubleType())), 0), "ineq");
+              
+                 result_value = codegen::global::builder.CreateNot(result_value, "lnot"); 
+                 result_value = codegen::global::builder.CreateIntCast(result_value, llvm::Type::getInt1Ty(codegen::global::context), 1,"i32toi1");
+                 result_value = codegen::global::builder.CreateIntCast(result_value, codegen::llvm_type(result_type), 1, "i1toi32");
+                 break;
+
+             default :
+                 result_value = nullptr;
+
+         }
+     }
+    return {result_type, result_value};
 }
 
 std::string UnOp::str() const {
@@ -732,8 +870,12 @@ llvm::Value* ReturnStmt::codegen() const {
     structs::TypeValuePair type_value_pair = m_expr->evaluate();
 
     if (type_value_pair.type->id == lang::types::TypeId::INVALID ||
-        type_value_pair.value == nullptr) 
+        type_value_pair.value == nullptr) {
+        if (errors.empty()) {
+            errors.push_back({this->loc, "Can't generate code for return statement"});
+        }
         return nullptr;
+    }
 
     structs::TypeCodegenFuncPair converted = semantic::convert(std::move(type_value_pair), return_type);
 
@@ -765,7 +907,7 @@ polymorphic_value<lang::types::Type> FuncCall::check_type() const {
 
     if (lpf->proto.args.size() != m_args.size()) {
         std::stringstream ss;
-        ss << "Function " << m_fname << "expects "
+        ss << "Function " << m_fname << " expects "
            << lpf->proto.args.size() << " args but you've called it with " << m_args.size(); 
         AstNode::errors.push_back({this->loc, ss.str()});
         return poly_type(invalid_type);
@@ -774,8 +916,9 @@ polymorphic_value<lang::types::Type> FuncCall::check_type() const {
     for (unsigned i=0; i < m_args.size(); i++) {
         auto exp_t = m_args[i]->check_type();
 
-        if (exp_t->id == lang::types::TypeId::INVALID)
+        if (exp_t->id == lang::types::TypeId::INVALID) {
             return poly_type(invalid_type);
+        }
 
         structs::TypeCodegenFuncPair type_cdg = semantic::convert({exp_t, nullptr}, lpf->proto.args[i].type);
         if (type_cdg.type->id == lang::types::TypeId::INVALID) {
@@ -788,8 +931,10 @@ polymorphic_value<lang::types::Type> FuncCall::check_type() const {
 structs::TypeValuePair FuncCall::evaluate() const {
 
     lang::types::InvalidType invalid_type;
-    if (this->check_type()->id == lang::types::TypeId::INVALID) 
+    if (this->check_type()->id == lang::types::TypeId::INVALID) {
+        //errors.push_back({this->loc, "Unable to call function"});
         return {poly_type(invalid_type), nullptr};
+    }
 
     std::optional<structs::LocProtoFuncTriple> lpf = AstNode::symbols.get_function(m_fname);
     std::vector<llvm::Value *> converted_args;
@@ -850,7 +995,6 @@ llvm::Value* VariableDecl::codegen() const {
                 }
             }
             symbols.define_variable(n, {m_type, ai});
-            return ai;
         }
     }
     return ai;
@@ -902,6 +1046,7 @@ structs::TypeValuePair VariableAssign::evaluate() const {
 
     structs::TypeCodegenFuncPair t_cdg = semantic::convert(expr_eval, tc);
     if (t_cdg.type->id != tc->id) {
+        std::cout << t_cdg.type->str() << tc->str() << std::endl;
          errors.push_back({loc, "Can't assign value of type " + tc->str() + " to variable of type " + opt_tv->type->str()});
          return {invalid_type, nullptr};
     }

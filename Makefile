@@ -1,5 +1,5 @@
 # Compiler variables
-GOAL = mylang.out
+GOAL = ctollvm.out
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -Wno-unused -g
 LDFLAGS=$(shell llvm-config --ldflags --libs)
@@ -58,4 +58,4 @@ $(SRC_DIR)/parser.tab.cpp $(INC_DIR)/parser.tab.hpp: $(SRC_DIR)/parser.ypp
 .PHONY: clean
 clean:
 	rm $(GOAL) $(OBJ_DIR)/*.o $(BIN_DIR)/*.out $(SRC_DIR)/parser.tab.* $(INC_DIR)/parser.tab.* $(BLD_STS)/parser.output \
-		$(SRC_DIR)/lex.yy.* $(INC_DIR)/stack.hh $(INC_DIR)/position.hh $(INC_DIR)/location.hh
+		$(SRC_DIR)/lex.yy.* $(INC_DIR)/stack.hh $(INC_DIR)/position.hh $(INC_DIR)/location.hh *.out *.s *.ll

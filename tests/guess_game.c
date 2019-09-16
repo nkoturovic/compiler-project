@@ -9,9 +9,8 @@ void srand(int seed);
 int main()
 {
 
-    // 0 (umesto NULL pointer-a)
-    srand(getpid());
-    int num = rand() % 10; // [0, 9]
+    srand(getpid()); // postavljamo seed
+    int num = rand() % 10; // gen. random u [0, 9]
     puts("Zamisljen je broj u segmentu [0, 9].");
     puts("Pogodi ga!");
 

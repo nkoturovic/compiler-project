@@ -31,13 +31,15 @@ jbcoe::polymorphic_value<Type> binop_check(
         if (op_id != BinOpId::PLUS && op_id != BinOpId::MINUS) {
             return poly_type(InvalidType());
         } else {
-            return op1_t;
+            return poly_type(InvalidType()); // TODO FIX (UNCOMMENT BELLOW)
+            //return op1_t;
         }
     } else if (op1_t->id <= TypeId::INT && op2_t->id == TypeId::PTR) {
         if (op_id != BinOpId::PLUS && op_id != BinOpId::MINUS) {
             return poly_type(InvalidType());
         } else {
-            return op2_t;
+            return poly_type(InvalidType()); // TODO FIX (UNCOMMENT BELLOW)
+            //return op2_t;
         }
     } else if (op1_t->id == TypeId::PTR || op2_t->id == TypeId::PTR) {
         return poly_type(InvalidType());
@@ -76,9 +78,17 @@ jbcoe::polymorphic_value<Type> binop_check(
 jbcoe::polymorphic_value<Type> unop_check(
     UnOpId op_id, const jbcoe::polymorphic_value<Type> &type) {
     if (op_id == UnOpId::INVALID || type->id == TypeId::INVALID ||
-        type->id == TypeId::VOID)
+        type->id == TypeId::VOID) {
         return poly_type(InvalidType());
-    return poly_type(type);
+    } else if (type->id == lang::types::TypeId::DOUBLE && (op_id == UnOpId::PLUS || op_id == UnOpId::MINUS)) {
+        return type;
+    } else if (type->id == lang::types::TypeId::DOUBLE && (op_id == UnOpId::L_NOT)) {
+        return poly_type(lang::types::IntType());
+    } else if (type->id <= lang::types::TypeId::INT && (op_id == UnOpId::PLUS || op_id == UnOpId::MINUS || op_id == UnOpId::B_NOT || op_id == UnOpId::L_NOT)) {
+        return poly_type(lang::types::IntType());
+    }
+
+    return poly_type(InvalidType());
 }
 
 
@@ -109,6 +119,12 @@ structs::TypeCodegenFuncPair convert(const structs::TypeValuePair &type_value_pa
     auto ret_func = [retval] { return retval; };
 
     return {ret_type, ret_func};
+}
+
+poly_type get_implicit_type(const poly_type &t1, const poly_type &t2) {
+    auto max_t = t1->id > t2->id ? t1 : t2;
+    max_t = max_t->id >= TypeId::INT ? max_t : poly_type(IntType());
+    return max_t;
 }
 
 }  // namespace compiler::lang::semantic

@@ -1,44 +1,14 @@
-/* Deklarisemo eksterne funkcije */
-int printf(char * s, int num);
-int puts(char *s);
+int printf(char * s, int n);
 
-/* Funkcija za ispis broja na stdout */
-void ispisi_broj(int br) {
-    printf("%d", br);
-}
-
-double pomnozi(double a, double b) {
-    return a * b;
-}
-
-/* main funkcija */
-int main() 
+int main()
 {
-    int sum = 0;
-    for (int i = 0; i < 10; i=i+1) { 
-        for (int j = 0; j < 10; j=j+1)
-            sum = sum + 1;
-        printf("%d. iteracija\n", i);
-    }
-
-    int n;
-    /* Blok ima svoj sopstveni doseg
-     * za promenljive */
-    {
-        int sum = 22;
-        n = 3;
-    }
-
-    printf("Suma iznosi %d\n", sum);
-
-    if (sum > 100)
-        puts("Suma je veca od 100");
-    else if (sum < 100)
-        puts("Suma je manja od 100");
-    else
-        puts("Vrednost sume je tacno 100");
-
-    printf("Kvadrat sume je %d\n", pomnozi(sum, sum));
-
-    return sum;
+    printf("%d\n", 2 && 0);
+    printf("%d\n", 2 || 0);
+    printf("%d\n", 0 || 2.2);
+    printf("%d\n", 0 | 2 && 0);
+    printf("%d\n", 0 | 2 && 3.3);
+    printf("%d\n", 2 < 3);
+    printf("%d\n", 2 + 2 + (2.2 <= 3.3333333333));
+    printf("%d", 2 >> 3);
+    printf("%d", 2 << 10);
 }

@@ -7,53 +7,57 @@ Sledeći primer otprilike ilustruje trenutne mogućnosti kompilatora, dosta stva
 **Primer programa:**
 ```c
 /* Deklarisemo eksterne funkcije */
-int printf(char * s, int num);
+void exit(int status);
+int printf(char * s, double num);
 int puts(char *s);
 
-/* Funkcija za ispis broja na stdout */
-void ispisi_broj(int br) {
-    printf("%d", br);
-}
-
-double pomnozi(double a, double b) {
-    return a * b;
+int faktorijel(int n) 
+{
+    if (n == 1 || n == 0)
+        return 1;
+    else if (n > 1)
+        return n * faktorijel(n-1);
+    else {
+        printf("Faktorijel nije definisan za: %.2lf\n", n);
+        exit(1);
+    }
 }
 
 /* main funkcija */
 int main() 
 {
-    int sum = 0;
-    for (int i = 0; i < 10; i=i+1) { 
+    double sum = 0;
+    for (int i=0; i <= 10; i=i+1) { 
         for (int j = 0; j < 10; j=j+1)
-            sum = sum + 1;
-        printf("%d. iteracija\n", i);
+            sum = sum + i / 100.0;
+        printf("%.0lf. iteracija\n", i+1);
     }
 
     int n;
     /* Blok ima svoj sopstveni doseg
      * za promenljive */
     {
-        int sum = 22;
+        char sum = 's'; // Tip char
+        double PI = 3.1415; // Tip double
         n = 3;
     }
 
-    printf("Suma iznosi %d\n", sum);
+    printf("Suma iznosi %.2lf\n", sum);
 
-    if (sum > 100)
-        puts("Suma je veca od 100");
-    else if (sum < 100)
-        puts("Suma je manja od 100");
+    if (sum > 5)
+        puts("Suma je veca od 5");
+    else if (sum < 5)
+        puts("Suma je manja od 5");
     else
-        puts("Vrednost sume je tacno 100");
+        puts("Vrednost sume je tacno 5");
 
-    printf("Kvadrat sume je %d\n", pomnozi(sum, sum));
+    printf("Faktorijel sume je %.0lf\n", faktorijel(sum));
 
     return sum;
 }
+
 ```
-```
-0. iteracija
-1. iteracija
+`1. iteracija
 2. iteracija
 3. iteracija
 4. iteracija
@@ -62,13 +66,31 @@ int main()
 7. iteracija
 8. iteracija
 9. iteracija
-Suma iznosi 100
+10. iteracija
+11. iteracija
+Suma iznosi 5.50
+Suma je veca od 5
+Faktorijel sume je 120``
 ```
 
 # Projekat je struktuiran na sledeći način:
 
 - `include` folder sadrži *.hpp* fajlove, source` folder sadrži *.cpp* fajlove.
 - Svaki folder/fajl unutar **include/src** direktno odgovcara odgovarajućem namespace-u.
+
+
+## Done - Urađeno
+
+- Lexer je završen 99%, možda fale sitne izmene
+- Način izgrađivanja konstrukcija jezika u parseru je ok, može se još malo razmotriti možda.
+- Code generation
+
+## TODO - Uraditi
+
+- Napraviti bolji TODO list
+- Spisak podržanih i nepodržanih jezičkih konstrukata.
+- Otkloniti potencijalne bug-ove.
+- Nastaviti razvoj kompilatora
 
 ## Namespace
 
@@ -86,38 +108,10 @@ Suma iznosi 100
 
 Valja pogledati svaki od ovih foldera/fajlova da bi se razumela struktura projekta i kako su stvari implementirane
 
-## Done - Urađeno
 
-- Lexer je završen 99%, možda fale sitne izmene
-- Način izgrađivanja konstrukcija jezika u parseru je ok, može se još malo razmotriti možda.
+## Korisni materijali
 
-## TODO - Uraditi
-
-- Generisanje koda je velika stavka koju treba odraditi, u suštini to je preslikavanje: AST -> `LLVM IR` posredstvom virtuelnog (tj. apstraktnog) metoda `codegen` iz bazne klase ast::Statement.
-- Treba proširiti Parser pravilima za definicije/deklaracije funkcija C-a, a naravno potom i mnogim konstrukcijama kasnije: grananje,petlje,itd i to uvezati sa AST-om...
-- AST pre svega treba: Implementirati `codegen` metode za postojeće klase, i proširiti asortiman klasa.
-
-
-**ZA POČETAK:** Pogledati folder `USEFULL_EXAMPLES`!!
-
-
-**NAPOMENA 1:** Prilikom generacije koda, generisani `llvm IR` kod se mora nalaziti u funkcijama jer će u suprotnom optimizator da eliminiše sve što je generisano za dati `modul` kada uradimio `module->print(llvm::outs(), nullptr)` ničeg neće imati!! Zato možda prvo treba proširiti parser i uvezati sa `ast`-om tako da podržava definicije/deklaracije funkcija.. Nije dobro raditi za svaki dobijeni Value*: Value->print.. Ova rečenica će verovatno postati logična u jednom trenutku. 
-
-
-**NAPOMENA 2:** Dakle za početak treba ići ka tome da može da se ispravno konstruiše IR za `example12.txt` program dat u primeru: `tests/example12.txt`.
-
-- Fix Grammar in parser
-- Maybe implement some kind of printAst() or str()
-- Implement codegen methods in ast
-- LLVM integration
-- Semantic checkers are fine
-- Many fixes required
-- PARSER & AST EXTENDING!!
-- CODE GENERATION!!
-
-# Korisni materijali
-
-- Folder `USEFULL_EXAMPLES`
+- Folder `USEFULL_EXAMPLES` (Pogledati neki od starih commit-ova).
 - Odštampani materijali koje sam ti dao. Tu ima isto kao sa vežbi primer `Kaleidoscope` na osnovu koga smo mi radili na vežbama.
 - Kaleidoscope tutorijal (isto rađeno na vežbama, imaš i odštampano): [link](https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/index.html)
 - Vežbe 2019, snimci su sa vežbi - bilo koja grupa: [link](http://poincare.matf.bg.ac.rs/~mirko/kk/2019/)
