@@ -4,6 +4,12 @@
 
 Sledeći primer otprilike ilustruje trenutne mogućnosti kompilatora, dosta stvari je u fazi razvoja.
 
+Prevođenje se vrši komandom:
+```
+./ctollvm.out putanja_do_prog.c
+```
+Prevodilac će generisati fajlove `imeprograma.o` i `imeprograma.ll`.
+
 **Primer programa:**
 ```c
 /* Deklarisemo eksterne funkcije */

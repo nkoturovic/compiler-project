@@ -5,6 +5,7 @@
 #include "../include/lang/operators.hpp"
 #include "../include/structs.hpp"
 #include "../include/codegen/codegen.hpp"
+#include <filesystem>
 
 int main(int argc, char * argv[])
 {
@@ -31,6 +32,7 @@ int main(int argc, char * argv[])
     codegen::global::fpass_manager->add(llvm::createDeadInstEliminationPass());
     codegen::global::fpass_manager->add(llvm::createDeadCodeEliminationPass());
     codegen::global::fpass_manager->add(llvm::createEntryExitInstrumenterPass());
+    codegen::global::fpass_manager->doInitialization();
 
     if (read_from_file) {
         codegen::global::module->setSourceFileName(argv[i-1]);
@@ -58,7 +60,7 @@ int main(int argc, char * argv[])
 
   if (ast_errors.empty()) {
     codegen::global::fpass_manager->doFinalization();
-    auto target_triple = llvm::sys::getDefaultTargetTriple();
+    auto TargetTriple = llvm::sys::getDefaultTargetTriple();
 
     llvm::InitializeAllTargetInfos();
     llvm::InitializeAllTargets();
@@ -67,44 +69,59 @@ int main(int argc, char * argv[])
     llvm::InitializeAllAsmPrinters();
 
     string Error;
-    auto target = llvm::TargetRegistry::lookupTarget(target_triple, Error);
+    auto target = llvm::TargetRegistry::lookupTarget(TargetTriple, Error);
 
     if (!target) {
         cerr << Error;
         exit(EXIT_FAILURE);
       }
 
-    std::string CPU = "generic";
-    std::string features = "";
+
+     auto CPU = "generic";
+     auto features = "";
      
      llvm::TargetOptions opt;
-     auto rm = llvm::Optional<llvm::Reloc::Model>();
-     auto target_machine = target->createTargetMachine(target_triple, CPU, features, opt, rm);
+     auto rm = llvm::Reloc::Model::PIC_;
+     auto target_machine = target->createTargetMachine(TargetTriple, CPU, features, opt, rm);
 
      codegen::global::module->setDataLayout(target_machine->createDataLayout());
-     codegen::global::module->setTargetTriple(target_triple);
+     codegen::global::module->setTargetTriple(TargetTriple);
 
-     std::string filename_o = "output.o";
      std::error_code EC;
-     llvm::raw_fd_ostream dest_o(filename_o, EC, llvm::sys::fs::F_None);
+
+     std::string fname = "output";
+     if (read_from_file) {
+         auto fpath = filesystem::path(argv[i-1]);
+         fname = fpath.filename().replace_extension("");
+     }
+
+     llvm::raw_fd_ostream dest(fname + ".o", EC, llvm::sys::fs::F_None);
      
      if (EC) {
-       cerr << "Could not open file: " << EC.message();
-       return 1;
+           cerr << "Could not open file: " << EC.message();
+           exit(EXIT_FAILURE);
      }
 
      llvm::legacy::PassManager pass;
-     auto FileTypeO = llvm::TargetMachine::CGFT_ObjectFile;
+     auto FileType = llvm::TargetMachine::CGFT_ObjectFile;
      
-     if (target_machine->addPassesToEmitFile(pass, dest_o, &dest_o, FileTypeO)) {
-          cerr << "TargetMachine can't emit a file of this type";
-          exit(EXIT_FAILURE);
+     if (target_machine->addPassesToEmitFile(pass, dest, nullptr, FileType)) {
+       cerr << "TargetMachine can't emit a file of this type";
+       return 1;
      }
-  
+     
         pass.run(*codegen::global::module);
-        dest_o.flush();
-        dest_o.close();
-        codegen::global::module->print(llvm::outs(), nullptr);
+        dest.flush();
+ 
+       llvm::raw_fd_ostream ll_out(fname + ".ll", EC, llvm::sys::fs::F_None);
+       if (EC) {
+           cerr << "Could not open file: " << EC.message();
+           exit(EXIT_FAILURE);
+     }
+
+       codegen::global::module->print(ll_out, nullptr);
+       ll_out.flush();
+       ll_out.close();
     }
 
 	return 0;
