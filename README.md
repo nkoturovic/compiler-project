@@ -4,7 +4,7 @@
 
 Prevođenje se vrši komandom:
 ```
-./ctollvm.out putanja_do_prog.c
+./ctollvm putanja_do_prog.c
 ```
 Prevodilac će generisati fajlove `imeprograma.o` i `imeprograma.ll`.
 

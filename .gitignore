@@ -45,3 +45,4 @@ stack.hh
 # llvm
 *.s
 *.ll
+ctollvm

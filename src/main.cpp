@@ -120,7 +120,7 @@ int main(int argc, char * argv[])
      }
 
        codegen::global::module->print(ll_out, nullptr);
-       codegen::global::module->print(llvm::outs(), nullptr);
+       //codegen::global::module->print(llvm::outs(), nullptr);
        ll_out.flush();
        ll_out.close();
     }

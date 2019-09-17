@@ -1,5 +1,5 @@
 # Compiler variables
-GOAL = ctollvm.out
+GOAL = ctollvm
 CXX = clang++
 CXXFLAGS = -std=c++17 -Wall -Wextra -Wno-unused-parameter
 LDFLAGS=$(shell llvm-config --ldflags --libs)
@@ -53,7 +53,11 @@ $(SRC_DIR)/lex.yy.c: $(SRC_DIR)/lexer.lex
 $(SRC_DIR)/parser.tab.cpp $(INC_DIR)/parser.tab.hpp: $(SRC_DIR)/parser.ypp
 	bison $< -d && mv *.hh include && mv *.hpp include && mv *.cpp src && sed -i 's?#include "parser.tab.hpp"?#include "../include/parser.tab.hpp"?g' $(SRC_DIR)/parser.tab.cpp
 
-.PHONY: clean
+.PHONY: clean clear
+
 clean:
 	rm $(GOAL) $(OBJ_DIR)/*.o $(BIN_DIR)/*.out $(SRC_DIR)/parser.tab.* $(INC_DIR)/parser.tab.* $(BLD_STS)/parser.output \
 		$(SRC_DIR)/lex.yy.* $(INC_DIR)/stack.hh $(INC_DIR)/position.hh $(INC_DIR)/location.hh *.out *.s *.ll *.o
+
+clear: 
+	rm *.ll *.o *.out
