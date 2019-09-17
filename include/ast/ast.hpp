@@ -3,13 +3,13 @@
 
 #include <optional>
 
+#include "../../include/codegen/codegen.hpp"
+#include "../../include/codegen/symbol.hpp"
 #include "../lang/operators.hpp"
 #include "../lang/types.hpp"
 #include "../location.hh"
 #include "../structs.hpp"
 #include "../third_party/polymorphic_value.h"
-#include "../../include/codegen/codegen.hpp"
-#include "../../include/codegen/symbol.hpp"
 
 namespace compiler::ast {
 // AST
@@ -21,7 +21,6 @@ class AstNode {
     inline static std::vector<structs::Error> warnings{};
 
    public:
-
     yy::location loc;
     virtual llvm::Value* codegen() const = 0;
     virtual std::string str() const = 0;
@@ -30,13 +29,12 @@ class AstNode {
     static std::vector<structs::Error> get_errors();
     static std::vector<structs::Error> get_warnings();
 
-    friend std::ostream& operator<<(std::ostream &out, const AstNode& node);
+    friend std::ostream& operator<<(std::ostream& out, const AstNode& node);
 };
-std::ostream& operator<<(std::ostream &out, const AstNode& node);
-
+std::ostream& operator<<(std::ostream& out, const AstNode& node);
 
 class Statement : public AstNode {
-    protected:
+   protected:
     bool p_is_terminator = false;
 
    public:
@@ -46,49 +44,50 @@ class Statement : public AstNode {
 };
 
 class IfElse : public Statement {
-    private:
-        jbcoe::polymorphic_value<Expression> m_condition;
-        jbcoe::polymorphic_value<Statement> m_if_branch;
-        std::optional<jbcoe::polymorphic_value<Statement>> m_opt_else_branch;
+   private:
+    jbcoe::polymorphic_value<Expression> m_condition;
+    jbcoe::polymorphic_value<Statement> m_if_branch;
+    std::optional<jbcoe::polymorphic_value<Statement>> m_opt_else_branch;
 
-    public:
-        IfElse(yy::location loc, jbcoe::polymorphic_value<Expression> condition, jbcoe::polymorphic_value<Statement> if_branch, std::optional<jbcoe::polymorphic_value<Statement>> opt_else_branch);
-        virtual llvm::Value* codegen() const override;
-        virtual std::string str() const override;
+   public:
+    IfElse(yy::location loc, jbcoe::polymorphic_value<Expression> condition,
+           jbcoe::polymorphic_value<Statement> if_branch,
+           std::optional<jbcoe::polymorphic_value<Statement>> opt_else_branch);
+    virtual llvm::Value* codegen() const override;
+    virtual std::string str() const override;
 };
 
 class While : public Statement {
-    private:
-        jbcoe::polymorphic_value<Expression> m_condition;
-        jbcoe::polymorphic_value<Statement> m_body;
+   private:
+    jbcoe::polymorphic_value<Expression> m_condition;
+    jbcoe::polymorphic_value<Statement> m_body;
 
-    public:
-        While(yy::location loc, jbcoe::polymorphic_value<Expression> condition, jbcoe::polymorphic_value<Statement> body);
-        virtual llvm::Value* codegen() const override;
-        virtual std::string str() const override;
-    private:
-        While(yy::location loc);
+   public:
+    While(yy::location loc, jbcoe::polymorphic_value<Expression> condition,
+          jbcoe::polymorphic_value<Statement> body);
+    virtual llvm::Value* codegen() const override;
+    virtual std::string str() const override;
 
-        friend class For;
+   private:
+    While(yy::location loc);
+
+    friend class For;
 };
-
 
 class For : public Statement {
-    private:
-        jbcoe::polymorphic_value<Statement> m_init_block;
-        While m_while; 
+   private:
+    jbcoe::polymorphic_value<Statement> m_init_block;
+    While m_while;
 
-    public:
-    For(yy::location loc, 
-            jbcoe::polymorphic_value<Statement> init_block, 
-            jbcoe::polymorphic_value<Expression> condition, 
-            jbcoe::polymorphic_value<Statement> after_expr,
-            jbcoe::polymorphic_value<Statement> body);
+   public:
+    For(yy::location loc, jbcoe::polymorphic_value<Statement> init_block,
+        jbcoe::polymorphic_value<Expression> condition,
+        jbcoe::polymorphic_value<Statement> after_expr,
+        jbcoe::polymorphic_value<Statement> body);
 
-        virtual llvm::Value* codegen() const override;
-        virtual std::string str() const override;
+    virtual llvm::Value* codegen() const override;
+    virtual std::string str() const override;
 };
-
 
 class Expression : public Statement {
    public:
@@ -143,7 +142,7 @@ class DoubleLiteral : public Literal {
 
 class StringLiteral : public Literal {
    private:
-       std::string m_val;
+    std::string m_val;
 
    public:
     StringLiteral(yy::location loc, std::string str);
@@ -151,43 +150,47 @@ class StringLiteral : public Literal {
     virtual std::string str() const override;
 };
 
-
 class Variable : public Expression {
-    private:
-        std::string m_id;
-    public:
+   private:
+    std::string m_id;
+
+   public:
     Variable(yy::location loc, std::string id);
 
-    virtual jbcoe::polymorphic_value<lang::types::Type> check_type() const override;
+    virtual jbcoe::polymorphic_value<lang::types::Type> check_type()
+        const override;
     virtual structs::TypeValuePair evaluate() const override;
     virtual std::string str() const override;
 };
 
 class VariableDecl : public Statement {
-    private:
-        jbcoe::polymorphic_value<lang::types::Type> m_type;
-        std::vector<structs::StrOptExprPair> m_var_decl_list;
-        
-    public:
-    VariableDecl(yy::location loc, jbcoe::polymorphic_value<lang::types::Type> type, std::vector<structs::StrOptExprPair> var_decl_list);
+   private:
+    jbcoe::polymorphic_value<lang::types::Type> m_type;
+    std::vector<structs::StrOptExprPair> m_var_decl_list;
+
+   public:
+    VariableDecl(yy::location loc,
+                 jbcoe::polymorphic_value<lang::types::Type> type,
+                 std::vector<structs::StrOptExprPair> var_decl_list);
 
     virtual llvm::Value* codegen() const override;
     virtual std::string str() const override;
 };
 
 class VariableAssign : public Expression {
-    private:
+   private:
     std::string m_id;
     jbcoe::polymorphic_value<Expression> m_expr;
-        
-    public:
-    VariableAssign(yy::location loc, std::string id, jbcoe::polymorphic_value<Expression> expr);
 
-    virtual jbcoe::polymorphic_value<lang::types::Type> check_type() const override;
+   public:
+    VariableAssign(yy::location loc, std::string id,
+                   jbcoe::polymorphic_value<Expression> expr);
+
+    virtual jbcoe::polymorphic_value<lang::types::Type> check_type()
+        const override;
     virtual structs::TypeValuePair evaluate() const override;
     virtual std::string str() const override;
 };
-
 
 class BinOp : public Expression {
    private:
@@ -226,17 +229,18 @@ class Block : public Statement {
           std::vector<jbcoe::polymorphic_value<Statement>> statements);
     virtual llvm::Value* codegen() const override;
     virtual std::string str() const override;
-    std::optional<jbcoe::polymorphic_value<Statement>> get_last_statement() const;
+    std::optional<jbcoe::polymorphic_value<Statement>> get_last_statement()
+        const;
 };
 
 class Empty : public Expression {
-public:
+   public:
     Empty(yy::location loc);
-    virtual jbcoe::polymorphic_value<lang::types::Type> check_type() const override;
+    virtual jbcoe::polymorphic_value<lang::types::Type> check_type()
+        const override;
     virtual structs::TypeValuePair evaluate() const override;
     virtual std::string str() const override;
 };
-
 
 class OuterDecl : public AstNode {
    public:
@@ -246,11 +250,10 @@ class OuterDecl : public AstNode {
 };
 
 class FuncDecl : public OuterDecl {
-  private:
+   private:
     compiler::structs::FuncProto m_prototype;
 
-  public:
-
+   public:
     FuncDecl(yy::location loc, structs::FuncProto prototype);
     virtual llvm::Function* codegen() const override;
     virtual std::string str() const override;
@@ -260,22 +263,23 @@ class FuncDecl : public OuterDecl {
 };
 
 class Terminator : public Statement {
-    public:
+   public:
     Terminator(yy::location loc);
 };
 
 class ReturnStmt : public Terminator {
-public:
+   public:
     ReturnStmt(yy::location loc, jbcoe::polymorphic_value<Expression> expr);
     virtual llvm::Value* codegen() const override;
     virtual std::string str() const override;
-private:
+
+   private:
     jbcoe::polymorphic_value<Expression> m_expr;
 };
 
 class FuncDef : public OuterDecl {
    private:
-    static inline FuncDef * sm_current_codegen_instance = nullptr;
+    static inline FuncDef* sm_current_codegen_instance = nullptr;
     FuncDecl m_prototype;
     Block m_body;
 
@@ -289,16 +293,18 @@ class FuncDef : public OuterDecl {
 };
 
 class FuncCall : public Expression {
-    private:
-        std::string m_fname;
-        std::vector<jbcoe::polymorphic_value<Expression>> m_args;
+   private:
+    std::string m_fname;
+    std::vector<jbcoe::polymorphic_value<Expression>> m_args;
 
-    public:
-        FuncCall(yy::location loc, std::string fname, std::vector<jbcoe::polymorphic_value<Expression>> arguments);
+   public:
+    FuncCall(yy::location loc, std::string fname,
+             std::vector<jbcoe::polymorphic_value<Expression>> arguments);
 
-        virtual jbcoe::polymorphic_value<lang::types::Type> check_type() const override;
-        virtual structs::TypeValuePair evaluate() const override;
-        virtual std::string str() const override;
+    virtual jbcoe::polymorphic_value<lang::types::Type> check_type()
+        const override;
+    virtual structs::TypeValuePair evaluate() const override;
+    virtual std::string str() const override;
 };
 
 }  // namespace compiler::ast

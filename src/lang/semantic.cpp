@@ -31,15 +31,15 @@ jbcoe::polymorphic_value<Type> binop_check(
         if (op_id != BinOpId::PLUS && op_id != BinOpId::MINUS) {
             return poly_type(InvalidType());
         } else {
-            return poly_type(InvalidType()); // TODO FIX (UNCOMMENT BELLOW)
-            //return op1_t;
+            return poly_type(InvalidType());  // TODO FIX (UNCOMMENT BELLOW)
+            // return op1_t;
         }
     } else if (op1_t->id <= TypeId::INT && op2_t->id == TypeId::PTR) {
         if (op_id != BinOpId::PLUS && op_id != BinOpId::MINUS) {
             return poly_type(InvalidType());
         } else {
-            return poly_type(InvalidType()); // TODO FIX (UNCOMMENT BELLOW)
-            //return op2_t;
+            return poly_type(InvalidType());  // TODO FIX (UNCOMMENT BELLOW)
+            // return op2_t;
         }
     } else if (op1_t->id == TypeId::PTR || op2_t->id == TypeId::PTR) {
         return poly_type(InvalidType());
@@ -67,8 +67,8 @@ jbcoe::polymorphic_value<Type> binop_check(
     if (op1_t->id <= TypeId::DOUBLE || op2_t->id <= TypeId::DOUBLE) {
         auto max_t = op1_t->id > op2_t->id ? op1_t : op2_t;
         max_t = max_t->id >= TypeId::INT ? max_t : poly_type(IntType());
-        //std::cout << op1_t->str() << "," << op2_t->str() << "->";
-        //std::cout << max_t->str() << std::endl;
+        // std::cout << op1_t->str() << "," << op2_t->str() << "->";
+        // std::cout << max_t->str() << std::endl;
         return max_t;
     }
 
@@ -80,41 +80,55 @@ jbcoe::polymorphic_value<Type> unop_check(
     if (op_id == UnOpId::INVALID || type->id == TypeId::INVALID ||
         type->id == TypeId::VOID) {
         return poly_type(InvalidType());
-    } else if (type->id == lang::types::TypeId::DOUBLE && (op_id == UnOpId::PLUS || op_id == UnOpId::MINUS)) {
+    } else if (type->id == lang::types::TypeId::DOUBLE &&
+               (op_id == UnOpId::PLUS || op_id == UnOpId::MINUS)) {
         return type;
-    } else if (type->id == lang::types::TypeId::DOUBLE && (op_id == UnOpId::L_NOT)) {
+    } else if (type->id == lang::types::TypeId::DOUBLE &&
+               (op_id == UnOpId::L_NOT)) {
         return poly_type(lang::types::IntType());
-    } else if (type->id <= lang::types::TypeId::INT && (op_id == UnOpId::PLUS || op_id == UnOpId::MINUS || op_id == UnOpId::B_NOT || op_id == UnOpId::L_NOT)) {
+    } else if (type->id <= lang::types::TypeId::INT &&
+               (op_id == UnOpId::PLUS || op_id == UnOpId::MINUS ||
+                op_id == UnOpId::B_NOT || op_id == UnOpId::L_NOT)) {
         return poly_type(lang::types::IntType());
     }
 
     return poly_type(InvalidType());
 }
 
-
-structs::TypeCodegenFuncPair convert(const structs::TypeValuePair &type_value_pair, jbcoe::polymorphic_value<types::Type> to_type) {
-
-    llvm::Value * retval = type_value_pair.value;
+structs::TypeCodegenFuncPair convert(
+    const structs::TypeValuePair &type_value_pair,
+    jbcoe::polymorphic_value<types::Type> to_type) {
+    llvm::Value *retval = type_value_pair.value;
     if (*to_type == *type_value_pair.type)
-        return { to_type, [type_value_pair](){ return type_value_pair.value;} };
+        return {to_type, [type_value_pair]() { return type_value_pair.value; }};
 
     poly_type ret_type(to_type);
     poly_type invalid_type = poly_type(lang::types::InvalidType());
 
-    if (to_type->id == lang::types::TypeId::DOUBLE && type_value_pair.type->id <= lang::types::TypeId::INT) {
+    if (to_type->id == lang::types::TypeId::DOUBLE &&
+        type_value_pair.type->id <= lang::types::TypeId::INT) {
         if (retval != nullptr)
-            retval = codegen::global::builder.CreateSIToFP(retval, codegen::llvm_type(to_type), "sitofp");
+            retval = codegen::global::builder.CreateSIToFP(
+                retval, codegen::llvm_type(to_type), "sitofp");
 
-    } else if (to_type->id <= lang::types::TypeId::INT && type_value_pair.type->id == lang::types::TypeId::DOUBLE) {
+    } else if (to_type->id <= lang::types::TypeId::INT &&
+               type_value_pair.type->id == lang::types::TypeId::DOUBLE) {
         if (retval != nullptr)
-            retval = codegen::global::builder.CreateFPToSI(retval, codegen::llvm_type(to_type), "fptosi");
+            retval = codegen::global::builder.CreateFPToSI(
+                retval, codegen::llvm_type(to_type), "fptosi");
 
-    } else if (to_type->id == lang::types::TypeId::INT && type_value_pair.type->id <= lang::types::TypeId::INT) {
-            retval = codegen::global::builder.CreateIntCast(retval, codegen::llvm_type(poly_type(lang::types::IntType())), true);
-    } else if (to_type->id == lang::types::TypeId::PTR && type_value_pair.type->id == lang::types::TypeId::PTR) {
-        ret_type = invalid_type; retval = nullptr;
+    } else if (to_type->id == lang::types::TypeId::INT &&
+               type_value_pair.type->id <= lang::types::TypeId::INT) {
+        retval = codegen::global::builder.CreateIntCast(
+            retval, codegen::llvm_type(poly_type(lang::types::IntType())),
+            true);
+    } else if (to_type->id == lang::types::TypeId::PTR &&
+               type_value_pair.type->id == lang::types::TypeId::PTR) {
+        ret_type = invalid_type;
+        retval = nullptr;
     } else {
-        ret_type = invalid_type; retval = nullptr;
+        ret_type = invalid_type;
+        retval = nullptr;
     }
     auto ret_func = [retval] { return retval; };
 

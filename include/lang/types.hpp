@@ -111,8 +111,6 @@ class StringType : public PointerType {
     StringType() : PointerType(jbcoe::polymorphic_value<Type>(CharType())) {}
 };
 
-
-
 }  // namespace compiler::lang::types
 
 #endif

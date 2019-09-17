@@ -13,7 +13,7 @@ llvm::Type* llvm_type(jbcoe::polymorphic_value<lang::types::Type> type) {
         return llvm::Type::getDoubleTy(global::context);
     } else if (type->id == TypeId::PTR) {
         // TODO - POINTER TYPE
-        PointerType &ptr = dynamic_cast<PointerType&>(*type);
+        PointerType& ptr = dynamic_cast<PointerType&>(*type);
         return llvm::PointerType::get(llvm_type(ptr.points_to), 0);
         return nullptr;
     }

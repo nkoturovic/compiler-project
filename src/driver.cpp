@@ -103,7 +103,6 @@ void Driver::error(const yy::location &l, const std::string &msg) const {
     std::cerr << err_strm.str() << std::flush;
 }
 
-
 void Driver::warning(const yy::location &l, const std::string &msg) const {
     std::string preciding_ws(l.begin.column - 1, ' ');
     std::stringstream err_strm;
