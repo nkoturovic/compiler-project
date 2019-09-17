@@ -1,14 +1,16 @@
 # Compiler project (C -> LLVM)
 
-## Primer
-
-Sledeći primer otprilike ilustruje trenutne mogućnosti kompilatora, dosta stvari je u fazi razvoja.
+## Prevođenje
 
 Prevođenje se vrši komandom:
 ```
 ./ctollvm.out putanja_do_prog.c
 ```
 Prevodilac će generisati fajlove `imeprograma.o` i `imeprograma.ll`.
+
+## Primer
+
+Sledeći primer otprilike ilustruje trenutne mogućnosti kompilatora, dosta stvari je u fazi razvoja.
 
 **Primer programa:**
 ```c

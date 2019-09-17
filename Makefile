@@ -47,7 +47,6 @@ $(OBJ_DIR)/codegen.o: $(SRC_DIR)/codegen/codegen.cpp $(INC_DIR)/codegen/codegen.
 $(OBJ_DIR)/symbol.o: $(SRC_DIR)/codegen/symbol.cpp $(INC_DIR)/codegen/symbol.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-
 $(SRC_DIR)/lex.yy.c: $(SRC_DIR)/lexer.lex
 	flex -o $@ $<
 

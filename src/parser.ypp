@@ -129,8 +129,8 @@ pipe_token "|"
 %nonassoc CALL
 
 /* If_statement precedence */
-%precedence NOELSE
-%precedence ELSE
+%precedence "then"
+%precedence "else"
 
 %%
 
@@ -275,8 +275,9 @@ List_of_expr : List_of_expr "," Expr { $$ = $1; $$.push_back(move($3)); }
              ;
 
 /* Program flow control */
-If_else_stmt : "if" "(" Expr ")" Stmt %prec NOELSE { $$ = poly_val<ast::Statement>(ast::IfElse(@$, move($3), move($5), {nullopt})); }
-             | "if" "(" Expr ")" Stmt "else" Stmt %prec ELSE { $$ = poly_val<ast::Statement>(ast::IfElse(@$, move($3), move($5), move($7))); }
+
+If_else_stmt : "if" "(" Expr ")" Stmt "else" Stmt { $$ = poly_val<ast::Statement>(ast::IfElse(@$, move($3), move($5), move($7))); }
+             | "if" "(" Expr ")" Stmt %prec "then" { $$ = poly_val<ast::Statement>(ast::IfElse(@$, move($3), move($5), {nullopt})); }
              ;
 
 
