@@ -99,7 +99,7 @@ loc.step();
 
 \"([^\\\"]|\\.)*\" { 
 	   std::string val = structs::str_repl_all(yytext, R"(\n)", "\n\n");
-	   return yy::parser::make_string_token(move(string(val.substr(1, val.length() - 2))), loc); }
+	   return yy::parser::make_string_token(string(val.substr(1, val.length() - 2)), loc); }
 
 [\t ] { loc.step(); }
 

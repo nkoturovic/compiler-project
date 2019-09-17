@@ -31,12 +31,13 @@ int main(int argc, char * argv[])
     codegen::global::fpass_manager->add(llvm::createDeadInstEliminationPass());
     codegen::global::fpass_manager->add(llvm::createDeadCodeEliminationPass());
     codegen::global::fpass_manager->add(llvm::createEntryExitInstrumenterPass());
-    codegen::global::fpass_manager->doInitialization();
 
-    if (read_from_file)
+    if (read_from_file) {
+        codegen::global::module->setSourceFileName(argv[i-1]);
         driver.parse(argv[i-1]);
-    else
+    } else {
         driver.parse();
+    }
 
     std::vector<structs::Error> ast_errors = ast::AstNode::get_errors();
     std::vector<structs::Error> ast_warnings = ast::AstNode::get_warnings();
@@ -57,7 +58,7 @@ int main(int argc, char * argv[])
 
   if (ast_errors.empty()) {
     codegen::global::fpass_manager->doFinalization();
-    auto TargetTriple = llvm::sys::getDefaultTargetTriple();
+    auto target_triple = llvm::sys::getDefaultTargetTriple();
 
     llvm::InitializeAllTargetInfos();
     llvm::InitializeAllTargets();
@@ -66,29 +67,26 @@ int main(int argc, char * argv[])
     llvm::InitializeAllAsmPrinters();
 
     string Error;
-    auto target = llvm::TargetRegistry::lookupTarget(TargetTriple, Error);
+    auto target = llvm::TargetRegistry::lookupTarget(target_triple, Error);
 
     if (!target) {
         cerr << Error;
         exit(EXIT_FAILURE);
       }
 
-
-    auto CPU = "generic";
-     auto Features = "";
+    std::string CPU = "generic";
+    std::string features = "";
      
      llvm::TargetOptions opt;
-     auto RM = llvm::Optional<llvm::Reloc::Model>();
-     auto target_machine = target->createTargetMachine(TargetTriple, CPU, Features, opt, RM);
+     auto rm = llvm::Optional<llvm::Reloc::Model>();
+     auto target_machine = target->createTargetMachine(target_triple, CPU, features, opt, rm);
 
      codegen::global::module->setDataLayout(target_machine->createDataLayout());
-     codegen::global::module->setTargetTriple(TargetTriple);
+     codegen::global::module->setTargetTriple(target_triple);
 
-     //auto filename_o = "output.o";
-     auto filename_s = "output.s";
+     std::string filename_o = "output.o";
      std::error_code EC;
-     //llvm::raw_fd_ostream dest_o(filename_o, EC, llvm::sys::fs::F_None);
-     llvm::raw_fd_ostream dest_s(filename_s, EC, llvm::sys::fs::F_None);
+     llvm::raw_fd_ostream dest_o(filename_o, EC, llvm::sys::fs::F_None);
      
      if (EC) {
        cerr << "Could not open file: " << EC.message();
@@ -96,24 +94,17 @@ int main(int argc, char * argv[])
      }
 
      llvm::legacy::PassManager pass;
-     //auto FileTypeO = llvm::TargetMachine::CGFT_ObjectFile;
-     auto FileTypeS = llvm::TargetMachine::CGFT_AssemblyFile;
+     auto FileTypeO = llvm::TargetMachine::CGFT_ObjectFile;
      
-     //if (target_machine->addPassesToEmitFile(pass, dest_o, &dest_o, FileTypeO)) {
-     //  cerr << "TargetMachine can't emit a file of this type";
-     //  return 1;
-     //}
-     
-     if (target_machine->addPassesToEmitFile(pass, dest_s, &dest_s, FileTypeS)) {
+     if (target_machine->addPassesToEmitFile(pass, dest_o, &dest_o, FileTypeO)) {
           cerr << "TargetMachine can't emit a file of this type";
-           return 1;
+          exit(EXIT_FAILURE);
      }
   
         pass.run(*codegen::global::module);
-        //dest_o.flush();
-        dest_s.flush();
- 
-       codegen::global::module->print(llvm::outs(), nullptr);
+        dest_o.flush();
+        dest_o.close();
+        codegen::global::module->print(llvm::outs(), nullptr);
     }
 
 	return 0;
