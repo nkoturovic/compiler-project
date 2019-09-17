@@ -1,12 +1,18 @@
 int puts(char * s);
 
+/* viselinijski
+ * komentar 
+ * kdalkdlad  */
 
 void f(int a, int b) {
     return 3;
 }
 
+
+/* main funkcija */
 int main()
 {
+    // jos neki komentar
     double d = 3;
     if (d % 1 == 0)
         puts("Paran");

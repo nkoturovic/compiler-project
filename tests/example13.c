@@ -7,6 +7,12 @@ int printf(char * s);
 int main()
 {
     printf("Hello world\n");
+    int a = 3;
 
-    return 0;
+    if (a > 2)
+        ;
+    else
+        ;
+
+    return a;
 }

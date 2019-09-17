@@ -965,7 +965,7 @@ llvm::Function* FuncDef::codegen() const {
         if (llvm::verifyFunction(*func, &llvm::errs()) == false) {
             codegen::global::fpass_manager->run(*func);
         } else {
-            codegen::global::module->print(llvm::outs(), nullptr);
+            codegen::global::module->print(llvm::errs(), nullptr);
             AstNode::errors.push_back({this->loc, "Function not valid"});
         }
     }
@@ -1201,7 +1201,6 @@ structs::TypeValuePair VariableAssign::evaluate() const {
 
     structs::TypeCodegenFuncPair t_cdg = semantic::convert(expr_eval, tc);
     if (t_cdg.type->id != tc->id) {
-        std::cout << t_cdg.type->str() << tc->str() << std::endl;
         errors.push_back({loc, "Can't assign value of type " + tc->str() +
                                    " to variable of type " +
                                    opt_tv->type->str()});

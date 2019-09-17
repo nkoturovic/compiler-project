@@ -31,9 +31,9 @@ loc.step();
 
 "//".* {}
 
-
 "/*"                BEGIN(C_COMMENT);
 <C_COMMENT>"*/"     BEGIN(INITIAL);
+<C_COMMENT>\n       { loc.lines(yyleng); loc.step(); loc.step(); }
 <C_COMMENT>.        { }
 
 "print" { return yy::parser::make_print_token(loc); }

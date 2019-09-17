@@ -183,7 +183,7 @@ List_of_stmts : List_of_stmts Stmt { $$ = move($1); $$.push_back(move($2)); }
               ;
 
 Stmt : Sprt_stmt ";" { $$ = move($1); } /* Stmt that ends with separator  */
-     | ";" { } /* TODO: Empty statement */ {}
+     | ";" { $$ = poly_val<ast::Statement>(ast::Empty(@$)); }
      | Block { $$ = move($1); }
      | If_else_stmt { $$ = move($1); }
      | "while" "(" Expr ")" Stmt { $$ = poly_val<ast::Statement>(ast::While(@$, move($3), move($5))); }
