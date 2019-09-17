@@ -65,7 +65,7 @@ int main()
 }
 
 ```
-`1. iteracija
+1. iteracija
 2. iteracija
 3. iteracija
 4. iteracija
@@ -78,7 +78,7 @@ int main()
 11. iteracija
 Suma iznosi 5.50
 Suma je veca od 5
-Faktorijel sume je 120``
+Faktorijel sume je 120
 ```
 
 # Projekat je struktuiran na sledeći način:
